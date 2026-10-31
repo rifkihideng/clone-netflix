@@ -1,0 +1,152 @@
+.banner {
+  position: relative;
+  height: 90vh;
+  background-color: #141414;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 40px 200px;
+}
+
+.banner__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.2s ease-in-out;
+}
+
+.banner__bg--active {
+  opacity: 1;
+}
+
+.banner--loading,
+.banner--error {
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0;
+  background: #141414;
+  text-align: center;
+}
+
+.banner--error p {
+  margin-bottom: 8px;
+  max-width: 640px;
+  color: #b3b3b3;
+}
+
+.banner__contents {
+  position: relative;
+  max-width: 600px;
+  z-index: 2;
+  animation: banner-fade-in 0.6s ease;
+}
+
+@keyframes banner-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.banner__title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.banner__buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.banner__button {
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  background-color: rgba(109, 109, 110, 0.7);
+  color: #fff;
+  transition: background-color 0.2s;
+}
+
+.banner__button:hover {
+  background-color: rgba(109, 109, 110, 0.4);
+}
+
+.banner__button--play {
+  background-color: #fff;
+  color: #000;
+}
+
+.banner__button--play:hover {
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+.banner__description {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #e5e5e5;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.banner__poster {
+  position: absolute;
+  right: 60px;
+  bottom: 200px;
+  width: 140px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+.banner__fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #141414 0%, transparent 55%);
+  z-index: 1;
+}
+
+.banner__dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.banner__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.banner__dot--active {
+  width: 26px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 768px) {
+  .banner {
+    padding: 0 20px 170px;
+    height: 70vh;
+  }
+
+  .banner__title {
+    font-size: 2rem;
+  }
+
+  .banner__poster {
+    display: none;
+  }
+}
