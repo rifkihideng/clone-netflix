@@ -11,6 +11,7 @@ export function usePaginatedFetch(path, params = {}) {
   const [error, setError] = useState(null)
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage] = useState(0)
+  const [moreError, setMoreError] = useState(null)
   const paramsKey = JSON.stringify(params)
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export function usePaginatedFetch(path, params = {}) {
 
     setLoading(true)
     setError(null)
+    setMoreError(null)
     setItems([])
     setPage(0)
     setTotalPages(1)
@@ -47,6 +49,7 @@ export function usePaginatedFetch(path, params = {}) {
     if (loadingMore || nextPage > totalPages) return
 
     setLoadingMore(true)
+    setMoreError(null)
     try {
       const json = await fetchFromTMDB(path, { ...params, page: nextPage })
       const results = json?.results ?? []
@@ -54,7 +57,8 @@ export function usePaginatedFetch(path, params = {}) {
       setTotalPages(json?.total_pages ?? totalPages)
       setPage(nextPage)
     } catch (err) {
-      setError(err.message)
+      // Jangan timpa `error` utama supaya daftar yang sudah termuat tetap tampil.
+      setMoreError(err.message)
     } finally {
       setLoadingMore(false)
     }
@@ -65,6 +69,7 @@ export function usePaginatedFetch(path, params = {}) {
     items,
     loading,
     loadingMore,
+    moreError,
     error,
     hasMore: page < totalPages,
     loadMore,

@@ -1,6 +1,5 @@
 import { Search } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam-search'
-import './Navbar.css'
 
 export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
   const handleSubmit = (event) => {
@@ -9,26 +8,30 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
   }
 
   return (
-    <nav className={`navbar ${showBg ? 'navbar--solid' : ''}`}>
-      <div className="navbar__inner">
+    <nav
+      className={`fixed inset-x-0 top-0 z-10 px-10 py-4 transition-colors duration-[400ms] max-md:px-5 max-md:py-3 ${
+        showBg ? 'bg-[#141414]' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between">
         <button
           type="button"
-          className="navbar__logo"
+          className="bg-transparent p-0 text-[1.8rem] font-black uppercase tracking-[1px] text-[#e50914] max-md:text-[1.4rem]"
           onClick={() => onSearch('')}
           aria-label="Kembali ke beranda"
         >
           NETFLIX
         </button>
 
-        <div className="navbar__actions">
-          <form className="navbar__search" role="search" onSubmit={handleSubmit}>
+        <div className="flex items-center gap-4">
+          <form className="flex items-center" role="search" onSubmit={handleSubmit}>
             <BorderBeam size="line" colorVariant="colorful" duration={3.1} borderRadius={20}>
-              <div className="navbar__search-box">
-                <button className="navbar__search-button" type="submit" aria-label="Cari">
+              <div className="flex h-[42px] w-60 items-center gap-2.5 rounded-[20px] bg-[#1d1d1d] px-[13px] text-[#565656] ring-1 ring-[#2c2f36]/50 max-md:w-40">
+                <button className="flex shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-[#565656] transition-colors duration-200 hover:text-white" type="submit" aria-label="Cari">
                   <Search aria-hidden="true" width={20} height={20} />
                 </button>
                 <input
-                  className="navbar__search-input"
+                  className="min-w-0 flex-1 border-none bg-transparent p-0 font-[inherit] text-sm text-white outline-none placeholder:text-[#565656] [&::-webkit-search-cancel-button]:appearance-none"
                   type="search"
                   placeholder="Cari film atau serial..."
                   value={query}
@@ -40,7 +43,7 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
           </form>
 
           <img
-            className="navbar__avatar"
+            className="h-9 w-9 rounded object-cover"
             src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png"
             alt="Profil"
           />

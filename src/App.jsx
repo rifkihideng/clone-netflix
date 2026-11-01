@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import './App.css'
 import Navbar from './components/Navbar.jsx'
 import Banner from './components/Banner.jsx'
 import Row from './components/Row.jsx'
@@ -52,7 +51,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="min-h-screen">
       <NetflixLoader active={!firstLoaded} />
 
       <Navbar
@@ -63,7 +62,7 @@ export default function App() {
       />
 
       {activeQuery ? (
-        <main className="content content--search">
+        <main className="relative z-10 mt-0 min-h-[70vh] pt-[120px] pb-10">
           <SearchResults query={activeQuery} onPlay={handlePlay} />
         </main>
       ) : (
@@ -76,7 +75,7 @@ export default function App() {
             onLoaded={() => setFirstLoaded(true)}
           />
 
-          <main className="content">
+          <main className="relative z-10 -mt-[120px] pb-10">
             <WatchHistoryRow items={historyItems} onPlay={handlePlay} />
             <MyListRow items={myList} onPlay={handlePlay} onRemove={toggleMyList} />
 
