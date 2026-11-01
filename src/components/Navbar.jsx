@@ -1,7 +1,12 @@
-import { Search } from 'lucide-react'
+import { useState } from 'react'
+import { Search, User } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam-search'
+import { useTypewriter } from '../hooks/useTypewriter.js'
 
 export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
+  const [focused, setFocused] = useState(false)
+  const typedPlaceholder = useTypewriter()
+
   const handleSubmit = (event) => {
     event.preventDefault()
     onSearch(query)
@@ -30,23 +35,35 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
                 <button className="flex shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-[#565656] transition-colors duration-200 hover:text-white" type="submit" aria-label="Cari">
                   <Search aria-hidden="true" width={20} height={20} />
                 </button>
-                <input
-                  className="min-w-0 flex-1 border-none bg-transparent p-0 font-[inherit] text-sm text-white outline-none placeholder:text-[#565656] [&::-webkit-search-cancel-button]:appearance-none"
-                  type="search"
-                  placeholder="Cari film atau serial..."
-                  value={query}
-                  onChange={(event) => onQueryChange(event.target.value)}
-                  aria-label="Cari film atau serial"
-                />
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    className="w-full border-none bg-transparent p-0 font-[inherit] text-sm text-white outline-none placeholder:text-[#565656] [&::-webkit-search-cancel-button]:appearance-none"
+                    type="search"
+                    placeholder={focused ? 'Cari film atau serial...' : ''}
+                    value={query}
+                    onChange={(event) => onQueryChange(event.target.value)}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    aria-label="Cari film atau serial"
+                  />
+                  {query === '' && !focused && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center overflow-hidden text-sm text-[#565656]">
+                      <span className="truncate">{typedPlaceholder}</span>
+                      <span className="ml-0.5 animate-pulse text-[#8b8b8b]">|</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </BorderBeam>
           </form>
 
-          <img
-            className="h-9 w-9 rounded object-cover max-[360px]:hidden"
-            src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png"
-            alt="Profil"
-          />
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1d1d1d] text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 max-[360px]:hidden"
+            role="img"
+            aria-label="Profil"
+          >
+            <User aria-hidden="true" width={20} height={20} />
+          </div>
         </div>
       </div>
     </nav>

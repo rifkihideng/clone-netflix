@@ -42,7 +42,7 @@ export default function MyListRow({ items, onPlay, onRemove }) {
                 <p className="text-xs text-[#f5c518]">⭐ {rating}</p>
               </div>
               <button
-                className="absolute right-2 top-2 z-[2] hidden h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full bg-[rgba(20,20,20,0.85)] text-white group-hover:flex"
+                className="absolute right-2 top-2 z-[2] hidden h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full bg-[rgba(20,20,20,0.85)] text-white group-hover:flex max-md:flex"
                 type="button"
                 aria-label={`Hapus ${name} dari Daftar Saya`}
                 onClick={(event) => {
