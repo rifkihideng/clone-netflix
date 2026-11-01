@@ -19,21 +19,21 @@
   <em>Proyek klon untuk pembelajaran. Netflix adalah merek dagang milik Netflix, Inc.</em>
 </p>
 
-Ini proyek iseng bikin tampilan Netflix pakai React + Vite. Film dan serialnya
-diambil langsung dari [The Movie Database (TMDB)](https://www.themoviedb.org/),
-jadi bukan data dummy. Selain bisa cari dan tonton trailer, ada fitur simpan ke
-**Daftar Saya** plus **riwayat tontonan** juga.
+Aplikasi web yang mereplikasi pengalaman antarmuka Netflix menggunakan React dan Vite. Data film dan serial bersumber langsung dari [The Movie Database (TMDB)](https://www.themoviedb.org/) melalui proxy backend, sehingga seluruh konten yang ditampilkan merupakan data aktual. Proyek ini mencakup pencarian, pemutaran trailer, penyimpanan ke **Daftar Saya**, serta pencatatan riwayat dan posisi tontonan.
 
 ## Fitur
 
-- Banner film trending yang berganti sendiri (cross-fade), lengkap dengan sinopsisnya.
-- Deretan film yang bisa digeser ke samping: trending, rating tertinggi, aksi, komedi, horor, dan dokumenter — tiap baris bisa dimuat terus lewat tombol **Lainnya**.
-- Pencarian film dan serial, dengan hasil yang bisa di-scroll terus (load more).
-- Halaman **404** sendiri untuk URL yang tidak dikenal (pakai React Router).
-- Kartu film membesar saat disorot kursor, persis seperti rasanya pakai Netflix.
-- Loading skeleton dan pesan error yang tidak bikin panik.
-- API key TMDB dijaga di server lewat proxy (dilengkapi cache + rate limit + whitelist endpoint), jadi tidak bocor dan tidak boros kuota.
-- **Daftar Saya** dan riwayat tontonan tersimpan ke Turso (libSQL). **Lanjutkan Menonton** menyimpan posisi terakhir, jadi bisa lanjut dari menit yang sama. Kalau Turso belum dikonfigurasi, otomatis fallback ke localStorage di browser — aplikasi tetap jalan.
+- Banner film trending yang berputar otomatis dengan transisi cross-fade, lengkap dengan sinopsis setiap judul.
+- Baris konten yang dapat digeser horizontal: tren minggu ini, rating tertinggi, aksi, komedi, horor, dan dokumenter — setiap baris mendukung pemuatan halaman berikutnya lewat tombol **Lainnya**.
+- Pencarian film dan serial lintas kategori dengan hasil paginasi; placeholder kolom pencarian mengetik otomatis (efek typewriter) dan profil pengguna direpresentasikan sebagai ikon.
+- Kartu judul membesar saat kursor diarahkan, mengikuti interaksi khas Netflix.
+- Pemutar trailer YouTube dalam modal: mendukung mute/unmute, resume dari posisi terakhir, dan daftar pemeran.
+- Splash screen pembuka bergaya Netflix saat aplikasi pertama dimuat.
+- Halaman **404** khusus untuk rute yang tidak dikenal (React Router).
+- Loading skeleton dan penanganan error yang informatif pada setiap baris.
+- Kredensial TMDB dijaga di sisi server melalui proxy yang dilengkapi cache, rate limiting, dan whitelist endpoint, sehingga tidak bocor dan tidak boros kuota.
+- **Daftar Saya** dan riwayat tontonan tersimpan di Turso (libSQL). **Lanjutkan Menonton** mencatat posisi terakhir sehingga pemutaran dapat dilanjutkan dari menit yang sama; tombol hapus pada kartu selalu terlihat di perangkat layar sentuh. Apabila Turso belum dikonfigurasi, aplikasi beralih ke penyimpanan lokal (localStorage).
+- Cache TMDB dua lapis (memori + localStorage) dengan strategi stale-while-revalidate: halaman utama langsung menampilkan data yang tersimpan saat dikunjungi kembali, lalu memperbaruinya di latar belakang.
 
 ## Menjalankan di komputer sendiri
 
@@ -55,9 +55,9 @@ jadi bukan data dummy. Selain bisa cari dan tonton trailer, ada fitur simpan ke
 
 ### 2. Database Turso (opsional, tapi disarankan)
 
-Fitur **Daftar Saya** dan **Lanjutkan Menonton** lebih enak kalau datanya tersimpan
-di [Turso](https://turso.tech) (libSQL), supaya tidak hilang saat browser dibersihkan.
-Kalau langkah ini dilewati, data tetap tersimpan — cuma lokal di browser.
+Fitur **Daftar Saya** dan **Lanjutkan Menonton** bekerja lebih baik jika datanya tersimpan
+di [Turso](https://turso.tech) (libSQL), sehingga tidak hilang saat penyimpanan browser
+dibersihkan. Jika langkah ini dilewati, data tetap tersimpan secara lokal di browser.
 
 1. Buat database dan token-nya (lewat dashboard atau CLI):
 
@@ -120,9 +120,9 @@ netflix-clone/
 └── src/
     ├── main.jsx            # Titik masuk aplikasi
     ├── App.jsx             # Susunan halaman utama
-    ├── api.js              # Helper request ke TMDB
+    ├── api.js              # Helper request TMDB + cache dua lapis (memori & localStorage)
     ├── pages/              # Halaman 404 (react-router-dom)
-    ├── hooks/              # useFetch, usePaginatedFetch, useMyList, useWatchHistory, useDeviceId
+    ├── hooks/              # useFetch, usePaginatedFetch, useMyList, useWatchHistory, useDeviceId, useTypewriter
     ├── lib/                # Util & pemetaan data film
-    └── components/         # Navbar, Banner, Row, PlayerModal, SearchResults, dll.
+    └── components/         # Navbar, Banner, Row, PlayerModal, SearchResults, NetflixLoader, dll.
 ```
