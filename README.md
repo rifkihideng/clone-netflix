@@ -1,4 +1,22 @@
-# Netflix Clone (React + Vite + TMDB API)
+# Netflix Clone
+
+<p align="center">
+  <img src="https://zonalogo.com/assets/netflix-logo-png-svg.webp?asset=2015" alt="Logo Netflix" width="220" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?style=flat&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Express-4-000000?style=flat&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/API-TMDB-01B4E4?style=flat&logo=themoviedatabase&logoColor=white" alt="TMDB API" />
+  <img src="https://img.shields.io/badge/Database-Turso%2FlibSQL-4FF8D2?style=flat&logo=turso&logoColor=black" alt="Turso/libSQL" />
+</p>
+
+<p align="center">
+  <em>Proyek klon untuk pembelajaran. Netflix adalah merek dagang milik Netflix, Inc.</em>
+</p>
 
 Website tampilan ala Netflix yang datanya diambil dari [The Movie Database (TMDB)](https://www.themoviedb.org/).
 
