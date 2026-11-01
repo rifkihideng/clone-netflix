@@ -107,6 +107,37 @@ npm start
 `npm start` menjalankan server Express yang menyajikan folder `dist/` sekaligus
 menjadi proxy API TMDB. Buka http://localhost:4000 untuk melihat hasilnya.
 
+## Deploy ke Vercel
+
+Proyek ini sudah disiapkan untuk Vercel: frontend Vite di-build ke `dist/`,
+sementara endpoint API dipindahkan ke serverless function di [api/[...path].js](api/[...path].js)
+dan dikonfigurasi lewat [vercel.json](vercel.json). Vercel mendeteksi keduanya secara otomatis.
+
+1. Pastikan semua perubahan sudah di-push ke GitHub, lalu impor repositori di
+   [vercel.com/new](https://vercel.com/new).
+2. Pada langkah environment variables, tambahkan nilai yang sama dengan file `.env`:
+
+   | Nama | Wajib | Keterangan |
+   | --- | --- | --- |
+   | `TMDB_API_KEY` | Ya | API key dari The Movie Database |
+   | `TURSO_DATABASE_URL` | Tidak | URL database Turso untuk Daftar Saya & riwayat |
+   | `TURSO_AUTH_TOKEN` | Tidak | Token autentikasi Turso |
+
+   Jika `TURSO_*` dikosongkan, aplikasi tetap berjalan dengan menyimpan
+   Daftar Saya dan riwayat secara lokal di browser.
+3. Klik **Deploy**. Setelah selesai, situs dapat diakses di domain `*.vercel.app`.
+
+Alternatif lewat CLI:
+
+```bash
+npm i -g vercel
+vercel        # deploy preview
+vercel --prod # deploy produksi
+```
+
+Catatan: serverless function di Vercel memakai Web API (Request/Response),
+sedangkan server Express di `server/` tetap dipakai untuk pengembangan lokal.
+
 ## Struktur folder
 
 ```
@@ -114,9 +145,12 @@ netflix-clone/
 ├── index.html
 ├── package.json
 ├── vite.config.js
+├── vercel.json            # Konfigurasi build & deploy Vercel
 ├── .env.example
+├── api/
+│   └── [...path].js       # Serverless function Vercel (proxy TMDB + Turso)
 ├── server/
-│   └── index.js            # Proxy TMDB + koneksi Turso (Express)
+│   └── index.js           # Proxy TMDB + koneksi Turso (Express, untuk dev lokal)
 └── src/
     ├── main.jsx            # Titik masuk aplikasi
     ├── App.jsx             # Susunan halaman utama
