@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Banner from './components/Banner.jsx'
 import Row from './components/Row.jsx'
@@ -11,6 +12,7 @@ import NetflixLoader from './components/NetflixLoader.jsx'
 import { useMyList } from './hooks/useMyList.js'
 import { useWatchHistory } from './hooks/useWatchHistory.js'
 import { requests } from './api.js'
+import NotFound from './pages/NotFound.jsx'
 
 export default function App() {
   const [showNavBg, setShowNavBg] = useState(false)
@@ -48,6 +50,13 @@ export default function App() {
   // Perbarui posisi tontonan saat player melaporkan progres.
   const handleProgress = (movie, progressSeconds, duration) => {
     recordWatch(movie, progressSeconds, duration)
+  }
+
+  const location = useLocation()
+
+  // Path selain "/" (beranda) dianggap tidak ditemukan.
+  if (location.pathname !== '/') {
+    return <NotFound />
   }
 
   return (

@@ -9,6 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    // Pastikan hanya ada satu salinan React/ReactDOM (mencegah error
+    // "Invalid hook call" saat react-router-dom dipakai bersama Vite).
+    dedupe: ['react', 'react-dom'],
     alias: {
       // Alias @ -> src, sesuai konvensi shadcn/ui.
       '@': path.resolve(__dirname, 'src'),
