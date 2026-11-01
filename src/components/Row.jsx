@@ -1,11 +1,10 @@
 import { Check, Plus } from 'lucide-react'
 import './Row.css'
 import { IMG_BASE_URL } from '../api.js'
-import { useFetch } from '../hooks/useFetch.js'
+import { usePaginatedFetch } from '../hooks/usePaginatedFetch.js'
 
 export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList, onToggleMyList }) {
-  const { data, loading, error } = useFetch(fetchUrl)
-  const movies = data?.results ?? []
+  const { items: movies, loading, loadingMore, error, hasMore, loadMore } = usePaginatedFetch(fetchUrl)
 
   return (
     <section className="row">
@@ -66,6 +65,17 @@ export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList
               </div>
             )
           })}
+
+        {!loading && !error && hasMore && (
+          <button
+            className="row__more"
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Memuat...' : 'Lainnya'}
+          </button>
+        )}
       </div>
     </section>
   )

@@ -100,10 +100,15 @@ export async function fetchWatchHistory(deviceId) {
   return requestJson(`/api/watch-history?${deviceQuery(deviceId)}`)
 }
 
-export async function recordWatch(deviceId, movie) {
+export async function recordWatch(deviceId, movie, progressSeconds = 0, duration = 0) {
   return requestJson('/api/watch-history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_id: deviceId, movie }),
+    body: JSON.stringify({
+      device_id: deviceId,
+      movie,
+      progress_seconds: progressSeconds,
+      duration,
+    }),
   })
 }

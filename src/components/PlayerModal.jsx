@@ -24,7 +24,7 @@ function getMediaType(movie) {
   return movie.name && !movie.title ? 'tv' : 'movie'
 }
 
-export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList }) {
+export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, onProgress }) {
   const mediaType = getMediaType(movie)
 
   const videosEndpoint = `/${mediaType}/${movie.id}/videos`
@@ -42,6 +42,19 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList }
 
   const iframeRef = useRef(null)
   const [muted, setMuted] = useState(false)
+
+  // Progres tontonan dilaporkan ke parent untuk fitur "Lanjutkan Menonton".
+  const progressRef = useRef({ currentTime: 0, duration: 0 })
+  const lastReportedRef = useRef(0)
+  const onProgressRef = useRef(onProgress)
+  const movieRef = useRef(movie)
+
+  useEffect(() => {
+    onProgressRef.current = onProgress
+  }, [onProgress])
+
+  // Mulai dari posisi terakhir bila ada riwayat tontonan.
+  const startAt = Math.max(0, Math.floor(Number(movie.progress_seconds) || 0))
 
   const title = movie.title || movie.name || movie.original_name
   const rating = movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : null
@@ -61,8 +74,63 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList }
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      // Simpan posisi terakhir saat modal ditutup.
+      const { currentTime, duration } = progressRef.current
+      if (duration > 0 && currentTime > 0) {
+        onProgressRef.current?.(movieRef.current, Math.floor(currentTime), Math.floor(duration))
+      }
     }
   }, [onClose])
+
+  // Terima info currentTime/duration dari player YouTube (postMessage API).
+  useEffect(() => {
+    const onMessage = (event) => {
+      let payload
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
+      }
+      if (payload?.event === 'infoDelivery' && payload?.info) {
+        const { currentTime, duration } = payload.info
+        if (typeof currentTime === 'number') progressRef.current.currentTime = currentTime
+        if (typeof duration === 'number') progressRef.current.duration = duration
+
+        // Laporkan progres bertahap (tiap loncat ~5 detik).
+        if (progressRef.current.duration > 0) {
+          const rounded = Math.floor(progressRef.current.currentTime)
+          if (Math.abs(rounded - lastReportedRef.current) >= 5) {
+            lastReportedRef.current = rounded
+            onProgressRef.current?.(
+              movieRef.current,
+              rounded,
+              Math.floor(progressRef.current.duration),
+            )
+          }
+        }
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  // Polling posisi tontonan secara berkala.
+  useEffect(() => {
+    if (!videoKey) return
+    const timer = setInterval(() => {
+      const iframe = iframeRef.current
+      if (!iframe?.contentWindow) return
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [] }),
+        '*',
+      )
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: 'getDuration', args: [] }),
+        '*',
+      )
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [videoKey])
 
   // Kirim perintah mute/unmute ke player YouTube (tanpa reload video).
   const sendPlayerCommand = (func) => {
@@ -70,6 +138,18 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList }
       JSON.stringify({ event: 'command', func, args: [] }),
       '*',
     )
+  }
+
+  // Aktifkan mode "listening" supaya player mengirim info currentTime/duration.
+  const setupPlayer = () => {
+    sendPlayerCommand(muted ? 'mute' : 'unMute')
+    const iframe = iframeRef.current
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({ event: 'listening', id: 0, channel: 'widget' }),
+        '*',
+      )
+    }
   }
 
   const toggleMute = () => {
@@ -102,11 +182,11 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList }
             <iframe
               ref={iframeRef}
               className="modal__iframe"
-              src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&rel=0&enablejsapi=1`}
+              src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&rel=0&enablejsapi=1${startAt > 0 ? `&start=${startAt}` : ''}`}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              onLoad={() => sendPlayerCommand(muted ? 'mute' : 'unMute')}
+              onLoad={setupPlayer}
             />
           )}
 

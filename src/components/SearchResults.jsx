@@ -1,13 +1,14 @@
 import './SearchResults.css'
 import { IMG_BASE_URL } from '../api.js'
-import { useFetch } from '../hooks/useFetch.js'
+import { usePaginatedFetch } from '../hooks/usePaginatedFetch.js'
 
 export default function SearchResults({ query, onPlay }) {
-  const { data, loading, error } = useFetch('/search/multi', { query })
-
-  const results = (data?.results ?? []).filter(
-    (item) => item.poster_path || item.backdrop_path,
+  const { items, loading, loadingMore, error, hasMore, loadMore } = usePaginatedFetch(
+    '/search/multi',
+    { query },
   )
+
+  const results = items.filter((item) => item.poster_path || item.backdrop_path)
 
   return (
     <section className="search">
@@ -64,6 +65,17 @@ export default function SearchResults({ query, onPlay }) {
               </div>
             )
           })}
+
+        {!loading && !error && hasMore && (
+          <button
+            className="search__more"
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Memuat...' : 'Muat Lebih Banyak'}
+          </button>
+        )}
       </div>
     </section>
   )

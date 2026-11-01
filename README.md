@@ -26,12 +26,12 @@ jadi bukan data dummy. Selain bisa cari dan tonton trailer, ada fitur simpan ke
 ## Fitur
 
 - Banner film trending yang berganti sendiri (cross-fade), lengkap dengan sinopsisnya.
-- Deretan film yang bisa digeser ke samping: trending, rating tertinggi, aksi, komedi, horor, dan dokumenter.
-- Pencarian film dan serial.
+- Deretan film yang bisa digeser ke samping: trending, rating tertinggi, aksi, komedi, horor, dan dokumenter — tiap baris bisa dimuat terus lewat tombol **Lainnya**.
+- Pencarian film dan serial, dengan hasil yang bisa di-scroll terus (load more).
 - Kartu film membesar saat disorot kursor, persis seperti rasanya pakai Netflix.
 - Loading skeleton dan pesan error yang tidak bikin panik.
-- API key TMDB dijaga di server lewat proxy, jadi tidak bocor ke browser.
-- **Daftar Saya** dan riwayat tontonan tersimpan ke Turso (libSQL). Kalau belum dikonfigurasi, otomatis fallback ke localStorage di browser — aplikasi tetap jalan.
+- API key TMDB dijaga di server lewat proxy (dilengkapi cache + rate limit + whitelist endpoint), jadi tidak bocor dan tidak boros kuota.
+- **Daftar Saya** dan riwayat tontonan tersimpan ke Turso (libSQL). **Lanjutkan Menonton** menyimpan posisi terakhir, jadi bisa lanjut dari menit yang sama. Kalau Turso belum dikonfigurasi, otomatis fallback ke localStorage di browser — aplikasi tetap jalan.
 
 ## Menjalankan di komputer sendiri
 
