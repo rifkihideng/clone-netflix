@@ -18,74 +18,95 @@
   <em>Proyek klon untuk pembelajaran. Netflix adalah merek dagang milik Netflix, Inc.</em>
 </p>
 
-Website tampilan ala Netflix yang datanya diambil dari [The Movie Database (TMDB)](https://www.themoviedb.org/).
+Ini proyek iseng bikin tampilan Netflix pakai React + Vite. Film dan serialnya
+diambil langsung dari [The Movie Database (TMDB)](https://www.themoviedb.org/),
+jadi bukan data dummy. Selain bisa cari dan tonton trailer, ada fitur simpan ke
+**Daftar Saya** plus **riwayat tontonan** juga.
 
 ## Fitur
-- Banner film trending dengan slider otomatis (cross-fade) + sinopsis
-- Baris film horizontal yang bisa digulir (trending, rating tertinggi, aksi, komedi, horor, dokumenter)
-- Pencarian film/serial
-- Efek hover membesar ala Netflix
-- Footer ala Netflix
-- Loading skeleton & penanganan error
-- Backend proxy yang menyembunyikan API key TMDB
-- Daftar Saya & riwayat tontonan tersimpan di database Turso (libSQL)
 
-## Cara menjalankan
+- Banner film trending yang berganti sendiri (cross-fade), lengkap dengan sinopsisnya.
+- Deretan film yang bisa digeser ke samping: trending, rating tertinggi, aksi, komedi, horor, dan dokumenter.
+- Pencarian film dan serial.
+- Kartu film membesar saat disorot kursor, persis seperti rasanya pakai Netflix.
+- Loading skeleton dan pesan error yang tidak bikin panik.
+- API key TMDB dijaga di server lewat proxy, jadi tidak bocor ke browser.
+- **Daftar Saya** dan riwayat tontonan tersimpan ke Turso (libSQL). Kalau belum dikonfigurasi, otomatis fallback ke localStorage di browser — aplikasi tetap jalan.
+
+## Menjalankan di komputer sendiri
 
 ### 1. Siapkan API key TMDB
-1. Daftar di https://www.themoviedb.org/signup
-2. Buka https://www.themoviedb.org/settings/api dan buat API key
+
+1. Daftar (gratis) di [themoviedb.org](https://www.themoviedb.org/signup).
+2. Buka [halaman API settings](https://www.themoviedb.org/settings/api), lalu buat API key.
 3. Salin `.env.example` menjadi `.env`:
+
    ```bash
    cp .env.example .env
    ```
-4. Isi file `.env`:
-   ```
+
+4. Isi API key kamu di file `.env`:
+
+   ```env
    TMDB_API_KEY=api_key_kamu
    ```
 
-### 2. (Opsional) Siapkan database Turso
-Fitur **Daftar Saya** dan **Lanjutkan Menonton** tersimpan di [Turso](https://turso.tech)
-(libSQL). Tanpa konfigurasi ini aplikasi tetap jalan, tapi data hanya disimpan
-lokal di browser (localStorage).
+### 2. Database Turso (opsional, tapi disarankan)
 
-1. Buat database di https://turso.tech (atau pakai CLI):
+Fitur **Daftar Saya** dan **Lanjutkan Menonton** lebih enak kalau datanya tersimpan
+di [Turso](https://turso.tech) (libSQL), supaya tidak hilang saat browser dibersihkan.
+Kalau langkah ini dilewati, data tetap tersimpan — cuma lokal di browser.
+
+1. Buat database dan token-nya (lewat dashboard atau CLI):
+
    ```bash
    turso db create netflix-clone
    turso db tokens create netflix-clone
    ```
-2. Tambahkan ke `.env`:
-   ```
-   TURSO_DATABASE_URL=libsql://netflix-clone-nama-org.turso.io
-   TURSO_AUTH_TOKEN=token_dari_langkah_di_atas
-   ```
-3. Tabel `my_list` dan `watch_history` dibuat otomatis saat server pertama kali
-   dijalankan (server sudah tersambung ke Turso).
 
-### 3. Install & jalankan (mode development)
+2. Tambahkan dua baris ini ke `.env`:
+
+   ```env
+   TURSO_DATABASE_URL=libsql://netflix-clone-nama-org.turso.io
+   TURSO_AUTH_TOKEN=token_kamu
+   ```
+
+3. Tidak perlu bikin tabel manual. Server membuat tabel `my_list` dan
+   `watch_history` otomatis saat pertama kali dijalankan.
+
+### 3. Install dan jalankan (development)
+
 ```bash
-npm install
+pnpm install
 ```
+
 Jalankan backend proxy di satu terminal:
+
 ```bash
-npm run server
+pnpm run server
 ```
-Lalu jalankan frontend di terminal lain:
+
+Lalu frontend di terminal lain:
+
 ```bash
-npm run dev
+pnpm run dev
 ```
-Buka http://localhost:5173 di browser. Vite meneruskan request `/api/tmdb/*`
-ke backend proxy di http://localhost:4000, sehingga API key tetap aman di server.
+
+Buka http://localhost:5173. Semua request ke `/api/tmdb/*` diteruskan Vite ke
+backend proxy di http://localhost:4000, jadi API key tetap aman di sisi server.
 
 ### 4. Build untuk produksi
+
 ```bash
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
-Server Express akan menyajikan folder `dist/` sekaligus proxy API TMDB.
-Buka http://localhost:4000 di browser.
+
+`pnpm start` menjalankan server Express yang menyajikan folder `dist/` sekaligus
+menjadi proxy API TMDB. Buka http://localhost:4000 untuk melihat hasilnya.
 
 ## Struktur folder
+
 ```
 netflix-clone/
 ├── index.html
@@ -93,19 +114,12 @@ netflix-clone/
 ├── vite.config.js
 ├── .env.example
 ├── server/
-│   └── index.js          # Backend proxy TMDB (Express)
+│   └── index.js            # Proxy TMDB + koneksi Turso (Express)
 └── src/
-    ├── main.jsx          # Entry point
-    ├── App.jsx           # Susunan halaman
-    ├── App.css
-    ├── index.css         # Style global
-    ├── api.js            # Helper fetch TMDB + daftar endpoint
-    ├── hooks/
-    │   └── useFetch.js   # Hook untuk ambil data
-    └── components/
-        ├── Navbar.jsx    # Navigasi atas + pencarian
-        ├── Banner.jsx    # Banner slider utama
-        ├── Row.jsx       # Baris film horizontal
-        ├── SearchResults.jsx  # Hasil pencarian
-        └── Footer.jsx    # Footer
+    ├── main.jsx            # Titik masuk aplikasi
+    ├── App.jsx             # Susunan halaman utama
+    ├── api.js              # Helper request ke TMDB
+    ├── hooks/              # useFetch, useMyList, useWatchHistory, useDeviceId
+    ├── lib/                # Util & pemetaan data film
+    └── components/         # Navbar, Banner, Row, PlayerModal, SearchResults, dll.
 ```
