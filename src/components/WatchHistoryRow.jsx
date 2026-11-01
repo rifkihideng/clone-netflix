@@ -1,7 +1,8 @@
+import { X } from 'lucide-react'
 import { IMG_BASE_URL } from '../api.js'
 
 // Baris "Lanjutkan Menonton" yang menampilkan riwayat tontonan terbaru.
-export default function WatchHistoryRow({ items, onPlay }) {
+export default function WatchHistoryRow({ items, onPlay, onRemove }) {
   if (!items || items.length === 0) return null
 
   return (
@@ -53,6 +54,19 @@ export default function WatchHistoryRow({ items, onPlay }) {
                     }}
                   />
                 </div>
+              )}
+              {onRemove && (
+                <button
+                  className="absolute right-2 top-2 z-[2] hidden h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full bg-[rgba(20,20,20,0.85)] text-white group-hover:flex"
+                  type="button"
+                  aria-label={`Hapus ${name} dari riwayat`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRemove(movie.id)
+                  }}
+                >
+                  <X size={16} />
+                </button>
               )}
             </div>
           )

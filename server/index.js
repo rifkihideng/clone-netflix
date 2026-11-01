@@ -275,6 +275,20 @@ app.post('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
+app.delete('/api/watch-history/:movieId', requireDb, requireDeviceId, async (req, res) => {
+  const movieId = Number(req.params.movieId)
+  if (!Number.isFinite(movieId)) return res.status(400).json({ error: 'ID film tidak valid.' })
+  try {
+    await db.execute({
+      sql: 'DELETE FROM watch_history WHERE device_id = ? AND movie_id = ?',
+      args: [req.deviceId, movieId],
+    })
+    res.json({ ok: true })
+  } catch {
+    res.status(500).json({ error: 'Gagal menghapus riwayat tontonan.' })
+  }
+})
+
 // Sajikan hasil build produksi (dist/) bila tersedia.
 const distDir = path.join(rootDir, 'dist')
 if (fs.existsSync(distDir)) {

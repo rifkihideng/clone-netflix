@@ -112,3 +112,9 @@ export async function recordWatch(deviceId, movie, progressSeconds = 0, duration
     }),
   })
 }
+
+export async function removeFromWatchHistory(deviceId, movieId) {
+  return requestJson(`/api/watch-history/${movieId}?${deviceQuery(deviceId)}`, {
+    method: 'DELETE',
+  })
+}

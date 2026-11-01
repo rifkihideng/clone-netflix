@@ -21,7 +21,7 @@ export default function App() {
   const [playing, setPlaying] = useState(null)
   const [firstLoaded, setFirstLoaded] = useState(false)
   const { items: myList, isInList, toggle: toggleMyList } = useMyList()
-  const { items: historyItems, record: recordWatch } = useWatchHistory()
+  const { items: historyItems, record: recordWatch, remove: removeWatch } = useWatchHistory()
 
   useEffect(() => {
     const onScroll = () => setShowNavBg(window.scrollY > 100)
@@ -85,7 +85,7 @@ export default function App() {
           />
 
           <main className="relative z-10 -mt-[120px] pb-10">
-            <WatchHistoryRow items={historyItems} onPlay={handlePlay} />
+            <WatchHistoryRow items={historyItems} onPlay={handlePlay} onRemove={removeWatch} />
             <MyListRow items={myList} onPlay={handlePlay} onRemove={toggleMyList} />
 
             <Row
