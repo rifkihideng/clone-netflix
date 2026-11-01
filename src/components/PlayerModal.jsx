@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, Volume2, VolumeX, X } from 'lucide-react'
-import { IMG_BASE_URL } from '../api.js'
+import { IMG_BASE_URL, fetchFromTMDB } from '../api.js'
 import { useFetch } from '../hooks/useFetch.js'
 
 // Jumlah maksimal pemeran yang ditampilkan di modal.
 const MAX_CAST = 12
 
-// Cari video YouTube yang cocok: utamakan Trailer, lalu Teaser, lalu video lain.
+// Cari video YouTube yang cocok: utamakan Trailer resmi, lalu Trailer,
+// Teaser, lalu video YouTube lain.
 function getVideoKey(videos) {
   const results = videos?.results ?? []
   const match =
+    results.find((v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official) ||
     results.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
     results.find((v) => v.site === 'YouTube' && v.type === 'Teaser') ||
     results.find((v) => v.site === 'YouTube')
@@ -39,6 +41,24 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
   const { data: details } = useFetch(detailsEndpoint)
   const { data: credits } = useFetch(creditsEndpoint)
 
+  // Fallback: banyak judul belum punya terjemahan Indonesia, sehingga
+  // `language=id-ID` mengembalikan overview kosong. Ambil detail sekali lagi
+  // tanpa batasan bahasa dan pakai sebagai cadangan untuk sinopsis/genre.
+  const [fallbackDetails, setFallbackDetails] = useState(null)
+  useEffect(() => {
+    if (!details || details.overview) return
+    let cancelled = false
+    fetchFromTMDB(detailsEndpoint, { language: '' })
+      .then((data) => {
+        if (!cancelled) setFallbackDetails(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [details])
+
   const iframeRef = useRef(null)
   // Mulai dalam keadaan bisu supaya autoplay diizinkan browser.
   const [muted, setMuted] = useState(true)
@@ -60,9 +80,10 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
   const rating = movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : null
   const videoKey = getVideoKey(videos)
 
-  // Sinopsis: utamakan dari endpoint detail (lebih lengkap), fallback ke data list.
-  const overview = details?.overview || movie.overview || ''
-  const genres = details?.genres?.slice(0, 3).map((genre) => genre.name) ?? []
+  // Sinopsis: utamakan detail Indonesia, lalu fallback bahasa lain, lalu data list.
+  const detailSource = details?.overview ? details : fallbackDetails
+  const overview = detailSource?.overview || movie.overview || ''
+  const genres = detailSource?.genres?.slice(0, 3).map((genre) => genre.name) ?? []
   const cast = (credits?.cast ?? []).slice(0, MAX_CAST)
 
   useEffect(() => {
