@@ -3,9 +3,10 @@
   inset: 0;
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(2px);
 }
@@ -14,6 +15,7 @@
   position: relative;
   width: 100%;
   max-width: 900px;
+  margin: auto 0;
   background: #141414;
   border-radius: 12px;
   overflow: hidden;
@@ -194,5 +196,23 @@
 @media (max-width: 768px) {
   .modal {
     padding: 12px;
+  }
+
+  .modal__panel {
+    border-radius: 8px;
+  }
+
+  .modal__info {
+    padding: 16px;
+  }
+
+  .modal__header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .modal__title {
+    flex-basis: 100%;
+    font-size: 1.25rem;
   }
 }
