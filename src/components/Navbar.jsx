@@ -9,7 +9,7 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
 
   return (
     <nav
-      className={`fixed inset-x-0 top-0 z-10 px-10 py-4 transition-colors duration-[400ms] max-md:px-5 max-md:py-3 ${
+      className={`fixed inset-x-0 top-0 z-50 px-10 py-4 transition-colors duration-[400ms] max-md:px-5 max-md:py-3 ${
         showBg ? 'bg-[#141414]' : ''
       }`}
     >
@@ -23,10 +23,10 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
           NETFLIX
         </button>
 
-        <div className="flex items-center gap-4">
-          <form className="flex items-center" role="search" onSubmit={handleSubmit}>
+        <div className="flex items-center gap-4 max-md:gap-2">
+          <form className="flex min-w-0 items-center" role="search" onSubmit={handleSubmit}>
             <BorderBeam size="line" colorVariant="colorful" duration={3.1} borderRadius={20}>
-              <div className="flex h-[42px] w-60 items-center gap-2.5 rounded-[20px] bg-[#1d1d1d] px-[13px] text-[#565656] ring-1 ring-[#2c2f36]/50 max-md:w-40">
+              <div className="flex h-[42px] w-60 items-center gap-2.5 rounded-[20px] bg-[#1d1d1d] px-[13px] text-[#565656] ring-1 ring-[#2c2f36]/50 max-md:w-40 max-[360px]:w-32">
                 <button className="flex shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-[#565656] transition-colors duration-200 hover:text-white" type="submit" aria-label="Cari">
                   <Search aria-hidden="true" width={20} height={20} />
                 </button>
@@ -43,7 +43,7 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
           </form>
 
           <img
-            className="h-9 w-9 rounded object-cover"
+            className="h-9 w-9 rounded object-cover max-[360px]:hidden"
             src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png"
             alt="Profil"
           />

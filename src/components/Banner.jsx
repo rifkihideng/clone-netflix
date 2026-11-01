@@ -109,7 +109,7 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
             {inList ? '✓ Tersimpan' : '+ Daftar Saya'}
           </button>
         </div>
-        <p className="text-base leading-6 text-[#e5e5e5] [text-shadow:1px_1px_4px_rgba(0,0,0,0.6)]">
+        <p className="text-base leading-6 text-[#e5e5e5] [text-shadow:1px_1px_4px_rgba(0,0,0,0.6)] max-md:line-clamp-3">
           {movie.overview}
         </p>
         <div className="mt-[18px] flex gap-2">
