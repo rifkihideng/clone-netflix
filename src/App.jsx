@@ -46,6 +46,11 @@ export default function App() {
     setPlaying(movie)
   }
 
+  // Perbarui posisi tontonan saat player melaporkan progres.
+  const handleProgress = (movie, progressSeconds, duration) => {
+    recordWatch(movie, progressSeconds, duration)
+  }
+
   return (
     <div className="app">
       <NetflixLoader active={!firstLoaded} />
@@ -130,6 +135,7 @@ export default function App() {
           onClose={() => setPlaying(null)}
           inMyList={isInList(playing.id)}
           onToggleMyList={() => toggleMyList(playing)}
+          onProgress={handleProgress}
         />
       )}
     </div>

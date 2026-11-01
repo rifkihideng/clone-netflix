@@ -129,6 +129,50 @@
   height: 330px;
 }
 
+.row__more {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  min-height: 270px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.row__more:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.row__more:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.row__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+}
+
+.row__progress-bar {
+  display: block;
+  height: 100%;
+  background: #e50914;
+}
+
 .row__error {
   padding: 0 40px;
   color: #b3b3b3;

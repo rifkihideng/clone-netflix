@@ -42,6 +42,19 @@ export default function WatchHistoryRow({ items, onPlay }) {
                 <p className="row__name">{name}</p>
                 <p className="row__rating">⭐ {rating}</p>
               </div>
+              {Number(movie.duration) > 0 && Number(movie.progress_seconds) > 0 && (
+                <div className="row__progress" aria-hidden="true">
+                  <span
+                    className="row__progress-bar"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (Number(movie.progress_seconds) / Number(movie.duration)) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )
         })}

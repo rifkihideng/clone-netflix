@@ -47,8 +47,8 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
       <div className="banner banner--error">
         <p>{error}</p>
         <p>
-          Buat file <code>.env</code> berisi <code>VITE_TMDB_API_KEY=...</code> lalu jalankan ulang
-          <code> npm run dev</code>.
+          Isi <code>TMDB_API_KEY</code> di file <code>.env</code> (di sisi server), lalu jalankan ulang
+          <code>pnpm run server</code>.
         </p>
       </div>
     )

@@ -23,11 +23,15 @@ export function useWatchHistory() {
     }
   }, [deviceId])
 
-  const record = (movie) => {
-    const normalized = normalizeMovie(movie)
+  const record = (movie, progressSeconds = 0, duration = 0) => {
+    const normalized = {
+      ...normalizeMovie(movie),
+      progress_seconds: progressSeconds,
+      duration,
+    }
     // Optimistic: pindahkan ke posisi teratas riwayat.
     setItems((prev) => [normalized, ...prev.filter((item) => item.id !== normalized.id)])
-    recordWatch(deviceId, normalized).catch(() => {
+    recordWatch(deviceId, normalized, progressSeconds, duration).catch(() => {
       // Gagal sinkron — biarkan UI tetap, server tidak berubah.
     })
   }
