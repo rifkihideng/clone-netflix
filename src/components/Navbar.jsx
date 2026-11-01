@@ -9,7 +9,7 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
 
   return (
     <nav
-      className={`fixed inset-x-0 top-0 z-10 px-10 py-4 transition-colors duration-[400ms] max-md:px-5 max-md:py-3 ${
+      className={`fixed inset-x-0 top-0 z-50 px-10 py-4 transition-colors duration-[400ms] max-md:px-5 max-md:py-3 ${
         showBg ? 'bg-[#141414]' : ''
       }`}
     >
