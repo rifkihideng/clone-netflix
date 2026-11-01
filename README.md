@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="JavaScript" />
   <img src="https://img.shields.io/badge/Express-4-000000?style=flat&logo=express&logoColor=white" alt="Express" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/React_Router-6-CA4245?style=flat&logo=reactrouter&logoColor=white" alt="React Router" />
   <img src="https://img.shields.io/badge/API-TMDB-01B4E4?style=flat&logo=themoviedatabase&logoColor=white" alt="TMDB API" />
   <img src="https://img.shields.io/badge/Database-Turso%2FlibSQL-4FF8D2?style=flat&logo=turso&logoColor=black" alt="Turso/libSQL" />
 </p>
@@ -28,6 +29,7 @@ jadi bukan data dummy. Selain bisa cari dan tonton trailer, ada fitur simpan ke
 - Banner film trending yang berganti sendiri (cross-fade), lengkap dengan sinopsisnya.
 - Deretan film yang bisa digeser ke samping: trending, rating tertinggi, aksi, komedi, horor, dan dokumenter — tiap baris bisa dimuat terus lewat tombol **Lainnya**.
 - Pencarian film dan serial, dengan hasil yang bisa di-scroll terus (load more).
+- Halaman **404** sendiri untuk URL yang tidak dikenal (pakai React Router).
 - Kartu film membesar saat disorot kursor, persis seperti rasanya pakai Netflix.
 - Loading skeleton dan pesan error yang tidak bikin panik.
 - API key TMDB dijaga di server lewat proxy (dilengkapi cache + rate limit + whitelist endpoint), jadi tidak bocor dan tidak boros kuota.
@@ -77,19 +79,19 @@ Kalau langkah ini dilewati, data tetap tersimpan — cuma lokal di browser.
 ### 3. Install dan jalankan (development)
 
 ```bash
-pnpm install
+npm install
 ```
 
 Jalankan backend proxy di satu terminal:
 
 ```bash
-pnpm run server
+npm run server
 ```
 
 Lalu frontend di terminal lain:
 
 ```bash
-pnpm run dev
+npm run dev
 ```
 
 Buka http://localhost:5173. Semua request ke `/api/tmdb/*` diteruskan Vite ke
@@ -98,11 +100,11 @@ backend proxy di http://localhost:4000, jadi API key tetap aman di sisi server.
 ### 4. Build untuk produksi
 
 ```bash
-pnpm run build
-pnpm start
+npm run build
+npm start
 ```
 
-`pnpm start` menjalankan server Express yang menyajikan folder `dist/` sekaligus
+`npm start` menjalankan server Express yang menyajikan folder `dist/` sekaligus
 menjadi proxy API TMDB. Buka http://localhost:4000 untuk melihat hasilnya.
 
 ## Struktur folder
@@ -119,7 +121,8 @@ netflix-clone/
     ├── main.jsx            # Titik masuk aplikasi
     ├── App.jsx             # Susunan halaman utama
     ├── api.js              # Helper request ke TMDB
-    ├── hooks/              # useFetch, useMyList, useWatchHistory, useDeviceId
+    ├── pages/              # Halaman 404 (react-router-dom)
+    ├── hooks/              # useFetch, usePaginatedFetch, useMyList, useWatchHistory, useDeviceId
     ├── lib/                # Util & pemetaan data film
     └── components/         # Navbar, Banner, Row, PlayerModal, SearchResults, dll.
 ```
