@@ -41,7 +41,8 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
   const { data: credits } = useFetch(creditsEndpoint)
 
   const iframeRef = useRef(null)
-  const [muted, setMuted] = useState(false)
+  // Mulai dalam keadaan bisu supaya autoplay diizinkan browser.
+  const [muted, setMuted] = useState(true)
 
   // Progres tontonan dilaporkan ke parent untuk fitur "Lanjutkan Menonton".
   const progressRef = useRef({ currentTime: 0, duration: 0 })
@@ -182,7 +183,7 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
             <iframe
               ref={iframeRef}
               className="modal__iframe"
-              src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&rel=0&enablejsapi=1${startAt > 0 ? `&start=${startAt}` : ''}`}
+              src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&mute=1&rel=0&enablejsapi=1${startAt > 0 ? `&start=${startAt}` : ''}`}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

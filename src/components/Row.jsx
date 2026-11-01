@@ -4,7 +4,7 @@ import { IMG_BASE_URL } from '../api.js'
 import { usePaginatedFetch } from '../hooks/usePaginatedFetch.js'
 
 export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList, onToggleMyList }) {
-  const { items: movies, loading, loadingMore, error, hasMore, loadMore } = usePaginatedFetch(fetchUrl)
+  const { items: movies, loading, loadingMore, moreError, error, hasMore, loadMore } = usePaginatedFetch(fetchUrl)
 
   return (
     <section className="row">
@@ -73,7 +73,7 @@ export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList
             onClick={loadMore}
             disabled={loadingMore}
           >
-            {loadingMore ? 'Memuat...' : 'Lainnya'}
+            {loadingMore ? 'Memuat...' : moreError ? 'Coba lagi' : 'Lainnya'}
           </button>
         )}
       </div>

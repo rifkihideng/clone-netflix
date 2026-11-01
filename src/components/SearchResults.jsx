@@ -3,7 +3,7 @@ import { IMG_BASE_URL } from '../api.js'
 import { usePaginatedFetch } from '../hooks/usePaginatedFetch.js'
 
 export default function SearchResults({ query, onPlay }) {
-  const { items, loading, loadingMore, error, hasMore, loadMore } = usePaginatedFetch(
+  const { items, loading, loadingMore, moreError, error, hasMore, loadMore } = usePaginatedFetch(
     '/search/multi',
     { query },
   )
@@ -73,7 +73,7 @@ export default function SearchResults({ query, onPlay }) {
             onClick={loadMore}
             disabled={loadingMore}
           >
-            {loadingMore ? 'Memuat...' : 'Muat Lebih Banyak'}
+            {loadingMore ? 'Memuat...' : moreError ? 'Coba lagi' : 'Muat Lebih Banyak'}
           </button>
         )}
       </div>
