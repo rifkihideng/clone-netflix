@@ -7,8 +7,10 @@ import SearchResults from './components/SearchResults.jsx'
 import Footer from './components/Footer.jsx'
 import PlayerModal from './components/PlayerModal.jsx'
 import MyListRow from './components/MyListRow.jsx'
+import WatchHistoryRow from './components/WatchHistoryRow.jsx'
 import NetflixLoader from './components/NetflixLoader.jsx'
 import { useMyList } from './hooks/useMyList.js'
+import { useWatchHistory } from './hooks/useWatchHistory.js'
 import { requests } from './api.js'
 
 export default function App() {
@@ -18,6 +20,7 @@ export default function App() {
   const [playing, setPlaying] = useState(null)
   const [firstLoaded, setFirstLoaded] = useState(false)
   const { items: myList, isInList, toggle: toggleMyList } = useMyList()
+  const { items: historyItems, record: recordWatch } = useWatchHistory()
 
   useEffect(() => {
     const onScroll = () => setShowNavBg(window.scrollY > 100)
@@ -37,6 +40,12 @@ export default function App() {
     setActiveQuery(trimmed)
   }
 
+  // Catat ke riwayat tontonan setiap kali film/serial dibuka.
+  const handlePlay = (movie) => {
+    recordWatch(movie)
+    setPlaying(movie)
+  }
+
   return (
     <div className="app">
       <NetflixLoader active={!firstLoaded} />
@@ -50,61 +59,62 @@ export default function App() {
 
       {activeQuery ? (
         <main className="content content--search">
-          <SearchResults query={activeQuery} onPlay={setPlaying} />
+          <SearchResults query={activeQuery} onPlay={handlePlay} />
         </main>
       ) : (
         <>
           <Banner
             fetchUrl={requests.trending}
-            onPlay={setPlaying}
+            onPlay={handlePlay}
             isInMyList={isInList}
             onToggleMyList={toggleMyList}
             onLoaded={() => setFirstLoaded(true)}
           />
 
           <main className="content">
-            <MyListRow items={myList} onPlay={setPlaying} onRemove={toggleMyList} />
+            <WatchHistoryRow items={historyItems} onPlay={handlePlay} />
+            <MyListRow items={myList} onPlay={handlePlay} onRemove={toggleMyList} />
 
             <Row
               title="Tren Minggu Ini"
               fetchUrl={requests.trending}
               large
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />
             <Row
               title="Film Rating Tertinggi"
               fetchUrl={requests.topRated}
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />
             <Row
               title="Film Aksi"
               fetchUrl={requests.action}
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />
             <Row
               title="Komedi"
               fetchUrl={requests.comedy}
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />
             <Row
               title="Horor"
               fetchUrl={requests.horror}
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />
             <Row
               title="Dokumenter"
               fetchUrl={requests.documentaries}
-              onPlay={setPlaying}
+              onPlay={handlePlay}
               isInMyList={isInList}
               onToggleMyList={toggleMyList}
             />

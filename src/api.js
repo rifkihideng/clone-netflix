@@ -64,3 +64,46 @@ export const requests = {
   horror: '/discover/movie?with_genres=27',
   documentaries: '/discover/movie?with_genres=99',
 }
+
+// --- API Daftar Saya & riwayat tontonan (disimpan di Turso) ---
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options)
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.error || `Gagal memuat data (status ${response.status})`)
+  }
+  return response.json()
+}
+
+function deviceQuery(deviceId) {
+  return `device_id=${encodeURIComponent(deviceId)}`
+}
+
+export async function fetchMyList(deviceId) {
+  return requestJson(`/api/my-list?${deviceQuery(deviceId)}`)
+}
+
+export async function addToMyList(deviceId, movie) {
+  return requestJson('/api/my-list', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId, movie }),
+  })
+}
+
+export async function removeFromMyList(deviceId, movieId) {
+  return requestJson(`/api/my-list/${movieId}?${deviceQuery(deviceId)}`, { method: 'DELETE' })
+}
+
+export async function fetchWatchHistory(deviceId) {
+  return requestJson(`/api/watch-history?${deviceQuery(deviceId)}`)
+}
+
+export async function recordWatch(deviceId, movie) {
+  return requestJson('/api/watch-history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId, movie }),
+  })
+}

@@ -1,22 +1,13 @@
 import { useEffect, useState } from 'react'
+import { normalizeMovie } from '../lib/movie.js'
+import { addToMyList, fetchMyList, removeFromMyList } from '../api.js'
+import { useDeviceId } from './useDeviceId.js'
 
 const STORAGE_KEY = 'netflix-clone-my-list'
 
-// Simpan hanya field yang dibutuhkan agar localStorage tetap ringan.
-function normalizeMovie(movie) {
-  return {
-    id: movie.id,
-    title: movie.title || movie.name || movie.original_name || '',
-    name: movie.name || movie.title || movie.original_name || '',
-    overview: movie.overview || '',
-    poster_path: movie.poster_path || movie.backdrop_path || null,
-    backdrop_path: movie.backdrop_path || movie.poster_path || null,
-    vote_average: movie.vote_average ?? 0,
-    media_type: movie.media_type || 'movie',
-  }
-}
-
-function loadList() {
+// Fallback lokal: dipakai hanya bila database Turso tidak bisa dihubungi,
+// supaya fitur Daftar Saya tetap berfungsi.
+function loadLocalList() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const parsed = raw ? JSON.parse(raw) : []
@@ -26,25 +17,68 @@ function loadList() {
   }
 }
 
+function saveLocalList(items) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  } catch {
+    // Storage penuh/diblokir — abaikan.
+  }
+}
+
 export function useMyList() {
-  const [items, setItems] = useState(loadList)
+  const deviceId = useDeviceId()
+  const [items, setItems] = useState([])
+  const [usingFallback, setUsingFallback] = useState(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-    } catch {
-      // Storage penuh atau diblokir — abaikan agar aplikasi tetap jalan.
+    let cancelled = false
+
+    fetchMyList(deviceId)
+      .then((list) => {
+        if (cancelled) return
+        setItems(Array.isArray(list) ? list : [])
+        setUsingFallback(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setItems(loadLocalList())
+        setUsingFallback(true)
+      })
+
+    return () => {
+      cancelled = true
     }
-  }, [items])
+  }, [deviceId])
+
+  useEffect(() => {
+    if (usingFallback) saveLocalList(items)
+  }, [items, usingFallback])
 
   const isInList = (id) => items.some((item) => item.id === id)
 
   const toggle = (movie) => {
+    const normalized = normalizeMovie(movie)
+    const exists = items.some((item) => item.id === normalized.id)
+
+    // Optimistic update: langsung ubah UI, sinkronkan ke server setelahnya.
     setItems((prev) =>
-      prev.some((item) => item.id === movie.id)
-        ? prev.filter((item) => item.id !== movie.id)
-        : [...prev, normalizeMovie(movie)],
+      exists ? prev.filter((item) => item.id !== normalized.id) : [normalized, ...prev],
     )
+
+    if (usingFallback) return
+
+    const request = exists
+      ? removeFromMyList(deviceId, normalized.id)
+      : addToMyList(deviceId, normalized)
+
+    request.catch(() => {
+      // Kembalikan state bila sinkronisasi gagal.
+      setItems((prev) =>
+        exists
+          ? [normalized, ...prev]
+          : prev.filter((item) => item.id !== normalized.id),
+      )
+    })
   }
 
   return { items, isInList, toggle }

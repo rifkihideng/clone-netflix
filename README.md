@@ -10,6 +10,7 @@ Website tampilan ala Netflix yang datanya diambil dari [The Movie Database (TMDB
 - Footer ala Netflix
 - Loading skeleton & penanganan error
 - Backend proxy yang menyembunyikan API key TMDB
+- Daftar Saya & riwayat tontonan tersimpan di database Turso (libSQL)
 
 ## Cara menjalankan
 
@@ -25,7 +26,25 @@ Website tampilan ala Netflix yang datanya diambil dari [The Movie Database (TMDB
    TMDB_API_KEY=api_key_kamu
    ```
 
-### 2. Install & jalankan (mode development)
+### 2. (Opsional) Siapkan database Turso
+Fitur **Daftar Saya** dan **Lanjutkan Menonton** tersimpan di [Turso](https://turso.tech)
+(libSQL). Tanpa konfigurasi ini aplikasi tetap jalan, tapi data hanya disimpan
+lokal di browser (localStorage).
+
+1. Buat database di https://turso.tech (atau pakai CLI):
+   ```bash
+   turso db create netflix-clone
+   turso db tokens create netflix-clone
+   ```
+2. Tambahkan ke `.env`:
+   ```
+   TURSO_DATABASE_URL=libsql://netflix-clone-nama-org.turso.io
+   TURSO_AUTH_TOKEN=token_dari_langkah_di_atas
+   ```
+3. Tabel `my_list` dan `watch_history` dibuat otomatis saat server pertama kali
+   dijalankan (server sudah tersambung ke Turso).
+
+### 3. Install & jalankan (mode development)
 ```bash
 npm install
 ```
@@ -40,7 +59,7 @@ npm run dev
 Buka http://localhost:5173 di browser. Vite meneruskan request `/api/tmdb/*`
 ke backend proxy di http://localhost:4000, sehingga API key tetap aman di server.
 
-### 3. Build untuk produksi
+### 4. Build untuk produksi
 ```bash
 npm run build
 npm start
