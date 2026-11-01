@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, Volume2, VolumeX, X } from 'lucide-react'
-import './PlayerModal.css'
 import { IMG_BASE_URL } from '../api.js'
 import { useFetch } from '../hooks/useFetch.js'
 
@@ -163,26 +162,34 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
 
   return (
     <div
-      className="modal"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/85 p-6 backdrop-blur-[2px] max-md:p-3"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={`Putar ${title}`}
     >
-      <div className="modal__panel" onClick={(event) => event.stopPropagation()}>
-        <button className="modal__close" type="button" onClick={onClose} aria-label="Tutup">
+      <div
+        className="relative my-auto w-full max-w-[900px] overflow-hidden rounded-xl bg-[#141414] shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-md:rounded-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          className="absolute right-3 top-3 z-[2] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[rgba(20,20,20,0.8)] text-white transition-colors duration-200 hover:bg-[#141414]"
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup"
+        >
           <X size={24} />
         </button>
 
-        <div className="modal__video">
-          {videosLoading && <p className="modal__status">Memuat trailer...</p>}
+        <div className="relative flex aspect-video items-center justify-center bg-black">
+          {videosLoading && <p className="p-6 text-center text-[#b3b3b3]">Memuat trailer...</p>}
 
-          {videosError && <p className="modal__status">{videosError}</p>}
+          {videosError && <p className="p-6 text-center text-[#b3b3b3]">{videosError}</p>}
 
           {!videosLoading && !videosError && videoKey && (
             <iframe
               ref={iframeRef}
-              className="modal__iframe"
+              className="h-full w-full border-none"
               src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&mute=1&rel=0&enablejsapi=1${startAt > 0 ? `&start=${startAt}` : ''}`}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -192,20 +199,26 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
           )}
 
           {!videosLoading && !videosError && !videoKey && (
-            <p className="modal__status">Trailer untuk “{title}” tidak tersedia.</p>
+            <p className="p-6 text-center text-[#b3b3b3]">
+              Trailer untuk “{title}” tidak tersedia.
+            </p>
           )}
         </div>
 
-        <div className="modal__info">
-          <div className="modal__header">
-            <h2 className="modal__title">{title}</h2>
-            {rating != null && <span className="modal__rating">⭐ {rating}</span>}
+        <div className="px-6 pb-6 pt-5 max-md:p-4">
+          <div className="mb-2.5 flex items-center gap-3.5 max-md:flex-wrap max-md:gap-2.5">
+            <h2 className="flex-1 text-2xl font-bold max-md:basis-full max-md:text-xl">{title}</h2>
+            {rating != null && (
+              <span className="whitespace-nowrap font-bold text-[#f5c518]">⭐ {rating}</span>
+            )}
             {onToggleMyList && (
               <button
-                className="modal__list"
+                className="flex cursor-pointer items-center gap-2 rounded bg-[rgba(109,109,110,0.7)] px-4 py-[9px] font-bold text-white transition-colors duration-200 hover:bg-[rgba(109,109,110,0.5)]"
                 type="button"
                 onClick={onToggleMyList}
-                aria-label={inMyList ? `Hapus ${title} dari Daftar Saya` : `Tambah ${title} ke Daftar Saya`}
+                aria-label={
+                  inMyList ? `Hapus ${title} dari Daftar Saya` : `Tambah ${title} ke Daftar Saya`
+                }
               >
                 {inMyList ? <Check size={22} /> : <Plus size={22} />}
                 <span>{inMyList ? 'Tersimpan' : 'Daftar Saya'}</span>
@@ -213,7 +226,7 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
             )}
             {videoKey && (
               <button
-                className="modal__mute"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[rgba(109,109,110,0.7)] text-white transition-colors duration-200 hover:bg-[rgba(109,109,110,0.5)]"
                 type="button"
                 onClick={toggleMute}
                 aria-label={muted ? 'Nyalakan suara' : 'Bisukan'}
@@ -224,37 +237,40 @@ export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, 
           </div>
 
           {genres.length > 0 && (
-            <div className="modal__genres">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[0.85rem] font-semibold text-[#b3b3b3]">
               {mediaType === 'tv' ? 'Serial' : 'Film'}
               {genres.map((genre) => (
-                <span key={genre} className="modal__genre">
+                <span
+                  key={genre}
+                  className="rounded-full border border-white/25 px-2.5 py-0.5 font-medium text-[#e5e5e5]"
+                >
                   {genre}
                 </span>
               ))}
             </div>
           )}
 
-          <p className="modal__overview">{overview || 'Sinopsis tidak tersedia.'}</p>
+          <p className="leading-6 text-[#b3b3b3]">{overview || 'Sinopsis tidak tersedia.'}</p>
 
           {cast.length > 0 && (
-            <div className="modal__cast">
-              <h3 className="modal__cast-title">Pemeran</h3>
-              <ul className="modal__cast-list">
+            <div className="mt-[18px]">
+              <h3 className="mb-2.5 text-base font-bold">Pemeran</h3>
+              <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-3">
                 {cast.map((person) => (
-                  <li key={person.id} className="modal__cast-item">
+                  <li key={person.id} className="flex flex-col items-center gap-1.5 text-center">
                     {person.profile_path ? (
                       <img
-                        className="modal__cast-avatar"
+                        className="h-[72px] w-[72px] rounded-full bg-[#2a2a2a] object-cover"
                         src={`${IMG_BASE_URL}/w185${person.profile_path}`}
                         alt={person.name}
                         loading="lazy"
                       />
                     ) : (
-                      <span className="modal__cast-avatar modal__cast-avatar--placeholder">
+                      <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#2a2a2a] text-2xl font-bold text-[#e5e5e5]">
                         {person.name?.charAt(0) ?? '?'}
                       </span>
                     )}
-                    <span className="modal__cast-name">{person.name}</span>
+                    <span className="text-xs leading-tight text-[#d4d4d4]">{person.name}</span>
                   </li>
                 ))}
               </ul>
