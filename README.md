@@ -73,8 +73,16 @@ dibersihkan. Jika langkah ini dilewati, data tetap tersimpan secara lokal di bro
    TURSO_AUTH_TOKEN=token_kamu
    ```
 
-3. Tidak perlu bikin tabel manual. Server membuat tabel `my_list` dan
-   `watch_history` otomatis saat pertama kali dijalankan.
+3. Tidak perlu bikin tabel manual. Server membuat skema relasional berikut
+   otomatis saat pertama kali dijalankan (lihat [server/schema.js](server/schema.js)):
+
+   - `devices` — identitas perangkat (user tanpa login).
+   - `movies` — detail film/serial yang disimpan sekali.
+   - `my_list` — relasi *device → movie* untuk Daftar Saya.
+   - `watch_history` — relasi *device → movie* beserta posisi tontonan.
+
+   Tabel `my_list` dan `watch_history` memakai foreign key ke `devices` dan
+   `movies`. Skema lama (data film yang terduplikasi) dimigrasikan otomatis.
 
 ### 3. Install dan jalankan (development)
 
@@ -110,7 +118,7 @@ menjadi proxy API TMDB. Buka http://localhost:4000 untuk melihat hasilnya.
 ## Deploy ke Vercel
 
 Proyek ini sudah disiapkan untuk Vercel: frontend Vite di-build ke `dist/`,
-sementara endpoint API dipindahkan ke serverless function di [api/[...path].js](api/[...path].js)
+sementara endpoint API dipindahkan ke serverless function di [api/index.js](api/index.js)
 dan dikonfigurasi lewat [vercel.json](vercel.json). Vercel mendeteksi keduanya secara otomatis.
 
 1. Pastikan semua perubahan sudah di-push ke GitHub, lalu impor repositori di
@@ -148,9 +156,10 @@ netflix-clone/
 ├── vercel.json            # Konfigurasi build & deploy Vercel
 ├── .env.example
 ├── api/
-│   └── [...path].js       # Serverless function Vercel (proxy TMDB + Turso)
+│   └── index.js           # Serverless function Vercel (proxy TMDB + Turso)
 ├── server/
-│   └── index.js           # Proxy TMDB + koneksi Turso (Express, untuk dev lokal)
+│   ├── index.js           # Proxy TMDB + koneksi Turso (Express, untuk dev lokal)
+│   └── schema.js          # Skema relasional & migrasi database (dipakai bersama)
 └── src/
     ├── main.jsx            # Titik masuk aplikasi
     ├── App.jsx             # Susunan halaman utama
