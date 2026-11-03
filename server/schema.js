@@ -71,21 +71,50 @@ export const WATCH_COLUMNS = `
 `
 
 // Pilih hanya field yang disimpan supaya payload dari klien tidak menulis kolom asing.
+// Sekaligus validasi & batasi panjang string sebagai lapis pertahanan tambahan
+// (defense-in-depth) meskipun SQL sudah memakai parameterized query.
+const MAX_LEN = {
+  title: 500,
+  name: 500,
+  overview: 2000,
+  poster_path: 500,
+  backdrop_path: 500,
+}
+
+function truncate(value, max) {
+  const s = String(value ?? '')
+  return s.length > max ? s.slice(0, max) : s
+}
+
 export function normalizeMovie(movie) {
   if (!movie || typeof movie !== 'object') return null
   const id = Number(movie.id)
-  if (!Number.isFinite(id)) return null
+  // Hanya terima integer positif yang aman (≤ Number.MAX_SAFE_INTEGER).
+  if (!Number.isSafeInteger(id) || id <= 0) return null
   const isTV = movie.media_type === 'tv' || (!movie.media_type && movie.name && !movie.title)
+  const voteAverage = Number(movie.vote_average)
   return {
     id,
-    title: movie.title || movie.name || movie.original_name || '',
-    name: movie.name || movie.title || movie.original_name || '',
-    overview: movie.overview || '',
-    poster_path: movie.poster_path || movie.backdrop_path || null,
-    backdrop_path: movie.backdrop_path || movie.poster_path || null,
-    vote_average: Number(movie.vote_average) || 0,
-    media_type: movie.media_type || (isTV ? 'tv' : 'movie'),
+    title: truncate(movie.title || movie.name || movie.original_name || '', MAX_LEN.title),
+    name: truncate(movie.name || movie.title || movie.original_name || '', MAX_LEN.name),
+    overview: truncate(movie.overview || '', MAX_LEN.overview),
+    poster_path: truncate(movie.poster_path || movie.backdrop_path || '', MAX_LEN.poster_path) || null,
+    backdrop_path: truncate(movie.backdrop_path || movie.poster_path || '', MAX_LEN.backdrop_path) || null,
+    vote_average: Number.isFinite(voteAverage) ? Math.min(10, Math.max(0, voteAverage)) : 0,
+    media_type: movie.media_type === 'tv' || movie.media_type === 'movie'
+      ? movie.media_type
+      : isTV ? 'tv' : 'movie',
   }
+}
+
+// Validasi device_id: hanya karakter aman (huruf/angka/-/_), panjang wajar.
+// Mengembalikan string bersih atau null bila tidak valid.
+export function sanitizeDeviceId(deviceId) {
+  if (typeof deviceId !== 'string') return null
+  const value = deviceId.trim()
+  if (!value || value.length > 128) return null
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null
+  return value
 }
 
 async function tableExists(db, table) {

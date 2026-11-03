@@ -5,6 +5,7 @@ import { createClient } from '@libsql/client'
 import {
   ensureSchema,
   normalizeMovie,
+  sanitizeDeviceId,
   upsertDevice,
   upsertMovie,
   MOVIE_COLUMNS,
@@ -29,10 +30,36 @@ function isPathAllowed(pathname) {
   return TMDB_PATH_ALLOWLIST.some((pattern) => pattern.test(pathname))
 }
 
-function json(body, status = 200) {
+// Security headers untuk setiap respons API (mengurangi risiko clickjacking,
+// sniffing MIME, dll).
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+}
+
+// CORS ketat: default tolak lintas-origin. Origin tambahan bisa diizinkan
+// lewat env ALLOWED_ORIGINS (dipisah koma).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+function isAllowedOrigin(origin, host) {
+  if (ALLOWED_ORIGINS.includes(origin)) return true
+  try {
+    return new URL(origin).host === host
+  } catch {
+    return false
+  }
+}
+
+function json(body, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS, ...extraHeaders },
   })
 }
 
@@ -51,7 +78,7 @@ function resolveApiPath(url) {
 }
 
 function deviceIdFromQuery(url) {
-  return String(url.searchParams.get('device_id') ?? '').trim()
+  return sanitizeDeviceId(String(url.searchParams.get('device_id') ?? ''))
 }
 
 // Proxy permintaan /api/tmdb/* ke TMDB. API key hanya ada di sisi server.
@@ -76,7 +103,7 @@ async function handleTmdb(url, tmdbPath) {
     const contentType = upstream.headers.get('content-type') || 'application/json'
     return new Response(body, {
       status: upstream.status,
-      headers: { 'Content-Type': contentType },
+      headers: { 'Content-Type': contentType, ...SECURITY_HEADERS },
     })
   } catch {
     return json({ error: 'Gagal terhubung ke server TMDB.' }, 502)
@@ -87,6 +114,25 @@ export default {
   async fetch(request) {
     const url = new URL(request.url, 'http://localhost')
     const apiPath = resolveApiPath(url)
+
+    // --- CORS ketat: tolak lintas-origin (kecuali yang diizinkan) ---
+    const origin = request.headers.get('origin')
+    if (origin && !isAllowedOrigin(origin, url.host)) {
+      return json({ error: 'Origin tidak diizinkan (CORS).' }, 403)
+    }
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          ...SECURITY_HEADERS,
+          'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          ...(origin
+            ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+            : {}),
+        },
+      })
+    }
 
     // --- Proxy TMDB ---
     if (apiPath === 'tmdb' || apiPath.startsWith('tmdb/')) {
@@ -122,8 +168,8 @@ export default {
 
       if (request.method === 'POST') {
         const body = await request.json().catch(() => ({}))
-        const deviceId = String(body.device_id ?? '').trim() || deviceIdFromQuery(url)
-        if (!deviceId) return json({ error: 'device_id wajib diisi.' }, 400)
+        const deviceId = sanitizeDeviceId(String(body.device_id ?? '')) || deviceIdFromQuery(url)
+        if (!deviceId) return json({ error: 'device_id tidak valid atau wajib diisi.' }, 400)
         const movie = normalizeMovie(body.movie)
         if (!movie) return json({ error: 'Data film tidak valid.' }, 400)
         try {
@@ -150,7 +196,9 @@ export default {
       const deviceId = deviceIdFromQuery(url)
       if (!deviceId) return json({ error: 'device_id wajib diisi.' }, 400)
       const movieId = Number(myListDelete[1])
-      if (!Number.isFinite(movieId)) return json({ error: 'ID film tidak valid.' }, 400)
+      if (!Number.isSafeInteger(movieId) || movieId <= 0) {
+        return json({ error: 'ID film tidak valid.' }, 400)
+      }
       try {
         await ensureSchema(db)
         await db.execute({
@@ -188,13 +236,17 @@ export default {
 
       if (request.method === 'POST') {
         const body = await request.json().catch(() => ({}))
-        const deviceId = String(body.device_id ?? '').trim() || deviceIdFromQuery(url)
-        if (!deviceId) return json({ error: 'device_id wajib diisi.' }, 400)
+        const deviceId = sanitizeDeviceId(String(body.device_id ?? '')) || deviceIdFromQuery(url)
+        if (!deviceId) return json({ error: 'device_id tidak valid atau wajib diisi.' }, 400)
         const movie = normalizeMovie(body.movie)
         if (!movie) return json({ error: 'Data film tidak valid.' }, 400)
 
-        let progressSeconds = Math.max(0, Number(body.progress_seconds) || 0)
-        let duration = Math.max(0, Number(body.duration) || 0)
+        const finiteNonNegative = (value) => {
+          const n = Number(value)
+          return Number.isFinite(n) && n > 0 ? n : 0
+        }
+        let progressSeconds = finiteNonNegative(body.progress_seconds)
+        let duration = finiteNonNegative(body.duration)
         if (duration > 0 && progressSeconds > duration) progressSeconds = duration
 
         try {
@@ -226,7 +278,9 @@ export default {
       const deviceId = deviceIdFromQuery(url)
       if (!deviceId) return json({ error: 'device_id wajib diisi.' }, 400)
       const movieId = Number(historyDelete[1])
-      if (!Number.isFinite(movieId)) return json({ error: 'ID film tidak valid.' }, 400)
+      if (!Number.isSafeInteger(movieId) || movieId <= 0) {
+        return json({ error: 'ID film tidak valid.' }, 400)
+      }
       try {
         await ensureSchema(db)
         await db.execute({
