@@ -1,4 +1,6 @@
 import express from 'express'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,6 +8,7 @@ import { createClient } from '@libsql/client'
 import {
   ensureSchema,
   normalizeMovie,
+  sanitizeDeviceId,
   upsertDevice,
   upsertMovie,
   MOVIE_COLUMNS,
@@ -20,7 +23,67 @@ const API_KEY = process.env.TMDB_API_KEY
 const PORT = process.env.PORT || 4000
 
 const app = express()
-app.use(express.json())
+app.disable('x-powered-by')
+app.use(express.json({ limit: '100kb' }))
+
+// --- Security headers (Helmet) ---
+// CSP disesuaikan dengan kebutuhan aplikasi: gambar TMDB, iframe YouTube,
+// dan inline style (background-image banner). Script hanya dari 'self'.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https://image.tmdb.org'],
+        frameSrc: ['https://www.youtube.com'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+  }),
+)
+
+// --- CORS ketat (default: tolak lintas-origin) ---
+// Aplikasi bersifat same-origin (frontend & API satu domain), jadi CORS
+// ditutup secara default. Origin tambahan bisa diizinkan lewat env
+// ALLOWED_ORIGINS (dipisah koma) bila kelak ada frontend terpisah.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+function isAllowedOrigin(origin, host) {
+  if (ALLOWED_ORIGINS.includes(origin)) return true
+  try {
+    return new URL(origin).host === host
+  } catch {
+    return false
+  }
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (origin && !isAllowedOrigin(origin, req.headers.host)) {
+    return res.status(403).json({ error: 'Origin tidak diizinkan (CORS).' })
+  }
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    return res.sendStatus(204)
+  }
+  next()
+})
 
 const TURSO_URL = process.env.TURSO_DATABASE_URL
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN
@@ -39,9 +102,9 @@ function requireDb(req, res, next) {
 }
 
 function requireDeviceId(req, res, next) {
-  const deviceId = String(req.query.device_id ?? req.body?.device_id ?? '').trim()
+  const deviceId = sanitizeDeviceId(String(req.query.device_id ?? req.body?.device_id ?? ''))
   if (!deviceId) {
-    return res.status(400).json({ error: 'device_id wajib diisi.' })
+    return res.status(400).json({ error: 'device_id tidak valid atau wajib diisi.' })
   }
   req.deviceId = deviceId
   next()
@@ -54,32 +117,47 @@ function requireDeviceId(req, res, next) {
 
 // Cache in-memory untuk response TMDB (GET 200 saja). Mengurangi jumlah
 // request ke TMDB ketika banyak pengguna membuka halaman yang sama.
+// Dibatasi jumlahnya supaya tidak tumbuh tanpa batas (anti memory-exhaustion).
 const TMDB_CACHE_TTL = 10 * 60 * 1000 // 10 menit
+const TMDB_CACHE_MAX = 500
 const tmdbCache = new Map()
 
-// Rate limit sederhana per IP (fixed window 1 menit).
-const RATE_WINDOW_MS = 60 * 1000
-const RATE_MAX = 120
-const rateBuckets = new Map()
-
-function rateLimit(req, res, next) {
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown'
-  const now = Date.now()
-  const bucket = rateBuckets.get(ip)
-
-  if (!bucket || now - bucket.start >= RATE_WINDOW_MS) {
-    rateBuckets.set(ip, { start: now, count: 1 })
-    return next()
+function cacheTmdb(key, entry) {
+  if (tmdbCache.size >= TMDB_CACHE_MAX) {
+    const oldest = tmdbCache.keys().next().value
+    if (oldest !== undefined) tmdbCache.delete(oldest)
   }
-
-  bucket.count += 1
-  if (bucket.count > RATE_MAX) {
-    return res.status(429).json({ error: 'Terlalu banyak permintaan. Coba lagi sebentar lagi.' })
-  }
-  return next()
+  tmdbCache.set(key, entry)
 }
 
-app.use('/api', rateLimit)
+// --- Rate limiting (anti-DoS) ---
+// Nilai bisa disesuaikan lewat env. Limit terpisah untuk aksi tulis (POST/DELETE)
+// karena operasi tersebut menyentuh database.
+const RATE_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60 * 1000
+const RATE_MAX = Number(process.env.RATE_LIMIT_MAX) || 120
+const WRITE_RATE_MAX = Number(process.env.RATE_LIMIT_WRITE_MAX) || 30
+
+const apiLimiter = rateLimit({
+  windowMs: RATE_WINDOW_MS,
+  limit: RATE_MAX,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak permintaan. Coba lagi sebentar lagi.' },
+})
+
+const writeLimiter = rateLimit({
+  windowMs: RATE_WINDOW_MS,
+  limit: WRITE_RATE_MAX,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak aksi tulis. Coba lagi sebentar lagi.' },
+})
+
+// Bila berjalan di belakang reverse proxy, aktifkan lewat env TRUST_PROXY=1
+// agar `req.ip` tidak dianggap IP proxy untuk semua pengguna.
+if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1)
+
+app.use('/api', apiLimiter)
 
 // Hanya izinkan endpoint TMDB yang memang dipakai aplikasi, supaya proxy
 // tidak bisa dipakai untuk menembak endpoint TMDB lain secara bebas.
@@ -132,7 +210,7 @@ app.use('/api/tmdb', async (req, res) => {
     const contentType = upstream.headers.get('content-type') || 'application/json'
 
     if (req.method === 'GET' && upstream.status === 200) {
-      tmdbCache.set(req.url, { body, contentType, status: upstream.status, time: Date.now() })
+      cacheTmdb(req.url, { body, contentType, status: upstream.status, time: Date.now() })
     }
 
     res.status(upstream.status)
@@ -160,7 +238,7 @@ app.get('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.post('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
+app.post('/api/my-list', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
   const movie = normalizeMovie(req.body?.movie)
   if (!movie) return res.status(400).json({ error: 'Data film tidak valid.' })
   try {
@@ -178,9 +256,11 @@ app.post('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.delete('/api/my-list/:movieId', requireDb, requireDeviceId, async (req, res) => {
+app.delete('/api/my-list/:movieId', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
   const movieId = Number(req.params.movieId)
-  if (!Number.isFinite(movieId)) return res.status(400).json({ error: 'ID film tidak valid.' })
+  if (!Number.isSafeInteger(movieId) || movieId <= 0) {
+    return res.status(400).json({ error: 'ID film tidak valid.' })
+  }
   try {
     await db.execute({
       sql: 'DELETE FROM my_list WHERE device_id = ? AND movie_id = ?',
@@ -209,12 +289,16 @@ app.get('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.post('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
+app.post('/api/watch-history', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
   const movie = normalizeMovie(req.body?.movie)
   if (!movie) return res.status(400).json({ error: 'Data film tidak valid.' })
 
-        let progressSeconds = Math.max(0, Number(req.body?.progress_seconds) || 0)
-        let duration = Math.max(0, Number(req.body?.duration) || 0)
+  const finiteNonNegative = (value) => {
+    const n = Number(value)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  }
+  let progressSeconds = finiteNonNegative(req.body?.progress_seconds)
+  let duration = finiteNonNegative(req.body?.duration)
   if (duration > 0 && progressSeconds > duration) progressSeconds = duration
 
   try {
@@ -237,9 +321,11 @@ app.post('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.delete('/api/watch-history/:movieId', requireDb, requireDeviceId, async (req, res) => {
+app.delete('/api/watch-history/:movieId', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
   const movieId = Number(req.params.movieId)
-  if (!Number.isFinite(movieId)) return res.status(400).json({ error: 'ID film tidak valid.' })
+  if (!Number.isSafeInteger(movieId) || movieId <= 0) {
+    return res.status(400).json({ error: 'ID film tidak valid.' })
+  }
   try {
     await db.execute({
       sql: 'DELETE FROM watch_history WHERE device_id = ? AND movie_id = ?',
@@ -272,9 +358,13 @@ async function start() {
     console.warn('TURSO_DATABASE_URL belum diisi — endpoint Daftar Saya & riwayat dinonaktifkan.')
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server proxy TMDB berjalan di http://localhost:${PORT}`)
   })
+
+  // Anti slow-request (Slowloris/drain): batasi waktu terima header & durasi request.
+  server.headersTimeout = 15 * 1000
+  server.requestTimeout = 30 * 1000
 }
 
 start()

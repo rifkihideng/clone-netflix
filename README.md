@@ -32,6 +32,7 @@ Aplikasi web yang mereplikasi pengalaman antarmuka Netflix menggunakan React dan
 - Halaman **404** khusus untuk rute yang tidak dikenal (React Router).
 - Loading skeleton dan penanganan error yang informatif pada setiap baris.
 - Kredensial TMDB dijaga di sisi server melalui proxy yang dilengkapi cache, rate limiting, dan whitelist endpoint, sehingga tidak bocor dan tidak boros kuota.
+- Keamanan HTTP: header keamanan via **Helmet** (Content-Security-Policy, `nosniff`, anti-clickjacking, dll.), **CORS ketat** (default tolak lintas-origin), validasi input (`device_id`, ID film, panjang string), dan query SQL yang sepenuhnya **parameterized** untuk mencegah SQL injection.
 - **Daftar Saya** dan riwayat tontonan tersimpan di Turso (libSQL). **Lanjutkan Menonton** mencatat posisi terakhir sehingga pemutaran dapat dilanjutkan dari menit yang sama; tombol hapus pada kartu selalu terlihat di perangkat layar sentuh. Apabila Turso belum dikonfigurasi, aplikasi beralih ke penyimpanan lokal (localStorage).
 - Cache TMDB dua lapis (memori + localStorage) dengan strategi stale-while-revalidate: halaman utama langsung menampilkan data yang tersimpan saat dikunjungi kembali, lalu memperbaruinya di latar belakang.
 
