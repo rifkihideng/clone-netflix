@@ -23,9 +23,10 @@ Aplikasi web yang mereplikasi pengalaman antarmuka Netflix menggunakan React dan
 
 ## Fitur
 
+- **Login dengan GitHub** (OAuth): seluruh aplikasi terkunci di balik halaman login bergaya Netflix; profil GitHub pengguna ditampilkan di navbar beserta tombol keluar, dan data Daftar Saya/riwayat tersimpan per akun.
 - Banner film trending yang berputar otomatis dengan transisi cross-fade, lengkap dengan sinopsis setiap judul.
 - Baris konten yang dapat digeser horizontal: tren minggu ini, rating tertinggi, aksi, komedi, horor, dan dokumenter — setiap baris mendukung pemuatan halaman berikutnya lewat tombol **Lainnya**.
-- Pencarian film dan serial lintas kategori dengan hasil paginasi; placeholder kolom pencarian mengetik otomatis (efek typewriter) dan profil pengguna direpresentasikan sebagai ikon.
+- Pencarian film dan serial lintas kategori dengan hasil paginasi; placeholder kolom pencarian mengetik otomatis (efek typewriter) dan profil pengguna (dari GitHub) ditampilkan di navbar.
 - Kartu judul membesar saat kursor diarahkan, mengikuti interaksi khas Netflix.
 - Pemutar trailer YouTube dalam modal: mendukung mute/unmute, resume dari posisi terakhir, dan daftar pemeran.
 - Splash screen pembuka bergaya Netflix saat aplikasi pertama dimuat.
@@ -77,15 +78,42 @@ dibersihkan. Jika langkah ini dilewati, data tetap tersimpan secara lokal di bro
 3. Tidak perlu bikin tabel manual. Server membuat skema relasional berikut
    otomatis saat pertama kali dijalankan (lihat [server/schema.js](server/schema.js)):
 
-   - `devices` — identitas perangkat (user tanpa login).
+   - `devices` — pemilik data (kini menyimpan id akun GitHub sebagai kunci).
    - `movies` — detail film/serial yang disimpan sekali.
-   - `my_list` — relasi *device → movie* untuk Daftar Saya.
-   - `watch_history` — relasi *device → movie* beserta posisi tontonan.
+   - `my_list` — relasi *pemilik → movie* untuk Daftar Saya.
+   - `watch_history` — relasi *pemilik → movie* beserta posisi tontonan.
+   - `users` — profil pengguna yang login lewat GitHub.
+   - `sessions` — sesi login (token cookie → pengguna).
 
    Tabel `my_list` dan `watch_history` memakai foreign key ke `devices` dan
    `movies`. Skema lama (data film yang terduplikasi) dimigrasikan otomatis.
 
-### 3. Install dan jalankan (development)
+### 3. Login dengan GitHub (disarankan)
+
+Aplikasi memakai **login OAuth GitHub** — seluruh beranda terkunci di balik
+halaman login. Ikuti langkah berikut:
+
+1. Buat **GitHub OAuth App** di
+   [github.com/settings/developers](https://github.com/settings/developers) →
+   **OAuth Apps** → **New OAuth App**.
+2. Isi formulir:
+   - **Homepage URL**: `http://localhost:5173` (development) atau `https://domain-anda.vercel.app`.
+   - **Authorization callback URL**:
+     - Lokal: `http://localhost:5173/api/auth/callback`
+     - Produksi: `https://domain-anda.vercel.app/api/auth/callback`
+3. Setelah dibuat, klik **Generate a new client secret**, lalu salin
+   **Client ID** dan **Client Secret** ke `.env`:
+
+   ```env
+   GITHUB_CLIENT_ID=client_id_kamu
+   GITHUB_CLIENT_SECRET=client_secret_kamu
+   APP_URL=http://localhost:5173
+   ```
+
+   `APP_URL` adalah URL dasar frontend (tanpa trailing slash), dipakai untuk
+   menyusun `redirect_uri` dan tujuan redirect setelah login.
+
+### 4. Install dan jalankan (development)
 
 ```bash
 npm install
@@ -106,7 +134,7 @@ npm run dev
 Buka http://localhost:5173. Semua request ke `/api/tmdb/*` diteruskan Vite ke
 backend proxy di http://localhost:4000, jadi API key tetap aman di sisi server.
 
-### 4. Build untuk produksi
+### 5. Build untuk produksi
 
 ```bash
 npm run build
@@ -131,9 +159,13 @@ dan dikonfigurasi lewat [vercel.json](vercel.json). Vercel mendeteksi keduanya s
    | `TMDB_API_KEY` | Ya | API key dari The Movie Database |
    | `TURSO_DATABASE_URL` | Tidak | URL database Turso untuk Daftar Saya & riwayat |
    | `TURSO_AUTH_TOKEN` | Tidak | Token autentikasi Turso |
+   | `GITHUB_CLIENT_ID` | Ya | Client ID OAuth GitHub (untuk login) |
+   | `GITHUB_CLIENT_SECRET` | Ya | Client Secret OAuth GitHub |
+   | `APP_URL` | Ya | URL dasar frontend, mis. `https://domain-anda.vercel.app` |
 
-   Jika `TURSO_*` dikosongkan, aplikasi tetap berjalan dengan menyimpan
-   Daftar Saya dan riwayat secara lokal di browser.
+   Jika `TURSO_*` dikosongkan, Daftar Saya dan riwayat disimpan secara lokal
+   di browser. `GITHUB_*` dan `APP_URL` wajib diisi agar login GitHub berfungsi
+   di produksi — callback URL harus diarahkan ke `https://domain-anda.vercel.app/api/auth/callback`.
 3. Klik **Deploy**. Setelah selesai, situs dapat diakses di domain `*.vercel.app`.
 
 Alternatif lewat CLI:

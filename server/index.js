@@ -8,12 +8,29 @@ import { createClient } from '@libsql/client'
 import {
   ensureSchema,
   normalizeMovie,
-  sanitizeDeviceId,
   upsertDevice,
   upsertMovie,
+  upsertUser,
+  createSession,
+  getSessionUser,
+  deleteSession,
   MOVIE_COLUMNS,
   WATCH_COLUMNS,
 } from './schema.js'
+import {
+  SESSION_COOKIE,
+  OAUTH_STATE_COOKIE,
+  appUrl,
+  isSecureCookie,
+  randomToken,
+  sessionMaxAgeSeconds,
+  oauthStateMaxAgeSeconds,
+  buildCookie,
+  parseCookies,
+  exchangeCodeForToken,
+  fetchGithubUser,
+  githubAuthorizeUrl,
+} from './auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -101,13 +118,25 @@ function requireDb(req, res, next) {
   next()
 }
 
-function requireDeviceId(req, res, next) {
-  const deviceId = sanitizeDeviceId(String(req.query.device_id ?? req.body?.device_id ?? ''))
-  if (!deviceId) {
-    return res.status(400).json({ error: 'device_id tidak valid atau wajib diisi.' })
+function sessionToken(req) {
+  return parseCookies(req.headers.cookie)[SESSION_COOKIE] ?? null
+}
+
+// Middleware otentikasi: wajib punya sesi login yang masih berlaku.
+// Identitas pengguna disimpan di req.user, dan kunci kepemilikan data
+// (id GitHub) di req.ownerKey.
+async function requireAuth(req, res, next) {
+  try {
+    const user = await getSessionUser(db, sessionToken(req))
+    if (!user) {
+      return res.status(401).json({ error: 'Login diperlukan.' })
+    }
+    req.user = user
+    req.ownerKey = String(user.github_id)
+    next()
+  } catch {
+    res.status(500).json({ error: 'Gagal memverifikasi sesi.' })
   }
-  req.deviceId = deviceId
-  next()
 }
 
 // Kolom film & riwayat dikembalikan lewat relasi JOIN ke tabel `movies`
@@ -221,8 +250,118 @@ app.use('/api/tmdb', async (req, res) => {
   }
 })
 
+// --- Login GitHub (OAuth) ---
+
+const githubClientId = process.env.GITHUB_CLIENT_ID
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET
+
+function githubConfigured() {
+  return Boolean(githubClientId && githubClientSecret)
+}
+
+app.get('/api/auth/login', (req, res) => {
+  if (!githubConfigured()) {
+    return res.status(503).json({
+      error:
+        'Login GitHub belum dikonfigurasi. Isi GITHUB_CLIENT_ID & GITHUB_CLIENT_SECRET di .env.',
+    })
+  }
+
+  // State anti-CSRF disimpan di cookie httpOnly lalu dibandingkan saat callback.
+  const state = randomToken(16)
+  res.setHeader(
+    'Set-Cookie',
+    buildCookie(OAUTH_STATE_COOKIE, state, {
+      maxAge: oauthStateMaxAgeSeconds(),
+      secure: isSecureCookie(),
+    }),
+  )
+  res.redirect(githubAuthorizeUrl(state))
+})
+
+app.get('/api/auth/callback', requireDb, async (req, res) => {
+  if (!githubConfigured()) {
+    return res.status(503).json({ error: 'Login GitHub belum dikonfigurasi.' })
+  }
+
+  const clearStateCookie = buildCookie(OAUTH_STATE_COOKIE, '', {
+    maxAge: 0,
+    secure: isSecureCookie(),
+  })
+  const stateCookie = parseCookies(req.headers.cookie)[OAUTH_STATE_COOKIE] ?? ''
+
+  if (!req.query.state || req.query.state !== stateCookie) {
+    res.setHeader('Set-Cookie', clearStateCookie)
+    return res.status(400).send('State tidak cocok (kemungkinan serangan CSRF).')
+  }
+
+  const code = String(req.query.code ?? '')
+  if (!code) {
+    res.setHeader('Set-Cookie', clearStateCookie)
+    return res.status(400).send('Kode OAuth tidak ditemukan.')
+  }
+
+  try {
+    const accessToken = await exchangeCodeForToken({
+      code,
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
+    })
+    if (!accessToken) {
+      res.setHeader('Set-Cookie', clearStateCookie)
+      return res.status(400).send('Gagal menukar kode OAuth dengan token.')
+    }
+
+    const ghUser = await fetchGithubUser(accessToken)
+    if (!ghUser || !ghUser.id) {
+      res.setHeader('Set-Cookie', clearStateCookie)
+      return res.status(401).send('Gagal mengambil profil GitHub.')
+    }
+
+    await ensureSchema(db)
+    await upsertUser(db, ghUser)
+
+    const token = randomToken(32)
+    const maxAge = sessionMaxAgeSeconds()
+    await createSession(db, token, ghUser.id, Date.now() + maxAge * 1000)
+
+    res.setHeader('Set-Cookie', [
+      clearStateCookie,
+      buildCookie(SESSION_COOKIE, token, { maxAge, secure: isSecureCookie() }),
+    ])
+    res.redirect(appUrl())
+  } catch {
+    res.setHeader('Set-Cookie', clearStateCookie)
+    res.status(500).send('Terjadi kesalahan saat login. Coba lagi.')
+  }
+})
+
+app.get('/api/auth/me', requireDb, async (req, res) => {
+  try {
+    const user = await getSessionUser(db, sessionToken(req))
+    if (!user) return res.status(401).json({ error: 'Login diperlukan.' })
+    res.json({ user })
+  } catch {
+    res.status(500).json({ error: 'Gagal membaca sesi.' })
+  }
+})
+
+app.post('/api/auth/logout', requireDb, async (req, res) => {
+  const token = sessionToken(req)
+  try {
+    await deleteSession(db, token)
+  } catch {
+    // Penghapusan sesi di DB gagal — cookie tetap dibersihkan di klien.
+  }
+  res.setHeader(
+    'Set-Cookie',
+    buildCookie(SESSION_COOKIE, '', { maxAge: 0, secure: isSecureCookie() }),
+  )
+  res.json({ ok: true })
+})
+
 // --- Daftar Saya (My List) ---
-app.get('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
+app.get('/api/my-list', requireDb, requireAuth, async (req, res) => {
   try {
     const result = await db.execute({
       sql: `SELECT ${MOVIE_COLUMNS}
@@ -230,7 +369,7 @@ app.get('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
             JOIN movies m ON m.movie_id = l.movie_id
             WHERE l.device_id = ?
             ORDER BY l.added_at DESC`,
-      args: [req.deviceId],
+      args: [req.ownerKey],
     })
     res.json(result.rows)
   } catch {
@@ -238,17 +377,17 @@ app.get('/api/my-list', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.post('/api/my-list', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
+app.post('/api/my-list', requireDb, writeLimiter, requireAuth, async (req, res) => {
   const movie = normalizeMovie(req.body?.movie)
   if (!movie) return res.status(400).json({ error: 'Data film tidak valid.' })
   try {
     await ensureSchema(db)
-    await upsertDevice(db, req.deviceId)
+    await upsertDevice(db, req.ownerKey)
     await upsertMovie(db, movie)
     await db.execute({
       sql: `INSERT INTO my_list (device_id, movie_id, added_at) VALUES (?, ?, ?)
             ON CONFLICT (device_id, movie_id) DO NOTHING`,
-      args: [req.deviceId, movie.id, Date.now()],
+      args: [req.ownerKey, movie.id, Date.now()],
     })
     res.status(201).json({ ok: true })
   } catch {
@@ -256,7 +395,7 @@ app.post('/api/my-list', requireDb, writeLimiter, requireDeviceId, async (req, r
   }
 })
 
-app.delete('/api/my-list/:movieId', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
+app.delete('/api/my-list/:movieId', requireDb, writeLimiter, requireAuth, async (req, res) => {
   const movieId = Number(req.params.movieId)
   if (!Number.isSafeInteger(movieId) || movieId <= 0) {
     return res.status(400).json({ error: 'ID film tidak valid.' })
@@ -264,7 +403,7 @@ app.delete('/api/my-list/:movieId', requireDb, writeLimiter, requireDeviceId, as
   try {
     await db.execute({
       sql: 'DELETE FROM my_list WHERE device_id = ? AND movie_id = ?',
-      args: [req.deviceId, movieId],
+      args: [req.ownerKey, movieId],
     })
     res.json({ ok: true })
   } catch {
@@ -273,7 +412,7 @@ app.delete('/api/my-list/:movieId', requireDb, writeLimiter, requireDeviceId, as
 })
 
 // --- Riwayat tontonan (Watch History) ---
-app.get('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
+app.get('/api/watch-history', requireDb, requireAuth, async (req, res) => {
   try {
     const result = await db.execute({
       sql: `SELECT ${WATCH_COLUMNS}
@@ -281,7 +420,7 @@ app.get('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
             JOIN movies m ON m.movie_id = l.movie_id
             WHERE l.device_id = ?
             ORDER BY l.watched_at DESC`,
-      args: [req.deviceId],
+      args: [req.ownerKey],
     })
     res.json(result.rows)
   } catch {
@@ -289,7 +428,7 @@ app.get('/api/watch-history', requireDb, requireDeviceId, async (req, res) => {
   }
 })
 
-app.post('/api/watch-history', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
+app.post('/api/watch-history', requireDb, writeLimiter, requireAuth, async (req, res) => {
   const movie = normalizeMovie(req.body?.movie)
   if (!movie) return res.status(400).json({ error: 'Data film tidak valid.' })
 
@@ -303,7 +442,7 @@ app.post('/api/watch-history', requireDb, writeLimiter, requireDeviceId, async (
 
   try {
     await ensureSchema(db)
-    await upsertDevice(db, req.deviceId)
+    await upsertDevice(db, req.ownerKey)
     await upsertMovie(db, movie)
     await db.execute({
       sql: `INSERT INTO watch_history
@@ -313,7 +452,7 @@ app.post('/api/watch-history', requireDb, writeLimiter, requireDeviceId, async (
               watched_at = excluded.watched_at,
               progress_seconds = excluded.progress_seconds,
               duration = excluded.duration`,
-      args: [req.deviceId, movie.id, Date.now(), progressSeconds, duration],
+      args: [req.ownerKey, movie.id, Date.now(), progressSeconds, duration],
     })
     res.status(201).json({ ok: true })
   } catch {
@@ -321,7 +460,7 @@ app.post('/api/watch-history', requireDb, writeLimiter, requireDeviceId, async (
   }
 })
 
-app.delete('/api/watch-history/:movieId', requireDb, writeLimiter, requireDeviceId, async (req, res) => {
+app.delete('/api/watch-history/:movieId', requireDb, writeLimiter, requireAuth, async (req, res) => {
   const movieId = Number(req.params.movieId)
   if (!Number.isSafeInteger(movieId) || movieId <= 0) {
     return res.status(400).json({ error: 'ID film tidak valid.' })
@@ -329,7 +468,7 @@ app.delete('/api/watch-history/:movieId', requireDb, writeLimiter, requireDevice
   try {
     await db.execute({
       sql: 'DELETE FROM watch_history WHERE device_id = ? AND movie_id = ?',
-      args: [req.deviceId, movieId],
+      args: [req.ownerKey, movieId],
     })
     res.json({ ok: true })
   } catch {

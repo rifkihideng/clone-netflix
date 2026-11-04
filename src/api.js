@@ -172,6 +172,8 @@ export const requests = {
 }
 
 // --- API Daftar Saya & riwayat tontonan (disimpan di Turso) ---
+// Identitas pengguna kini diambil dari sesi cookie httpOnly, sehingga
+// tidak perlu lagi mengirim device_id dari klien.
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options)
@@ -182,36 +184,44 @@ async function requestJson(url, options = {}) {
   return response.json()
 }
 
-function deviceQuery(deviceId) {
-  return `device_id=${encodeURIComponent(deviceId)}`
+// --- Otentikasi GitHub (sesi cookie httpOnly) ---
+
+// Link untuk memulai login (backend akan redirect ke GitHub).
+export const loginUrl = '/api/auth/login'
+
+export async function fetchMe() {
+  return requestJson('/api/auth/me')
 }
 
-export async function fetchMyList(deviceId) {
-  return requestJson(`/api/my-list?${deviceQuery(deviceId)}`)
+export async function logoutApi() {
+  return requestJson('/api/auth/logout', { method: 'POST' })
 }
 
-export async function addToMyList(deviceId, movie) {
+export async function fetchMyList() {
+  return requestJson('/api/my-list')
+}
+
+export async function addToMyList(movie) {
   return requestJson('/api/my-list', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_id: deviceId, movie }),
+    body: JSON.stringify({ movie }),
   })
 }
 
-export async function removeFromMyList(deviceId, movieId) {
-  return requestJson(`/api/my-list/${movieId}?${deviceQuery(deviceId)}`, { method: 'DELETE' })
+export async function removeFromMyList(movieId) {
+  return requestJson(`/api/my-list/${movieId}`, { method: 'DELETE' })
 }
 
-export async function fetchWatchHistory(deviceId) {
-  return requestJson(`/api/watch-history?${deviceQuery(deviceId)}`)
+export async function fetchWatchHistory() {
+  return requestJson('/api/watch-history')
 }
 
-export async function recordWatch(deviceId, movie, progressSeconds = 0, duration = 0) {
+export async function recordWatch(movie, progressSeconds = 0, duration = 0) {
   return requestJson('/api/watch-history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      device_id: deviceId,
       movie,
       progress_seconds: progressSeconds,
       duration,
@@ -219,8 +229,6 @@ export async function recordWatch(deviceId, movie, progressSeconds = 0, duration
   })
 }
 
-export async function removeFromWatchHistory(deviceId, movieId) {
-  return requestJson(`/api/watch-history/${movieId}?${deviceQuery(deviceId)}`, {
-    method: 'DELETE',
-  })
+export async function removeFromWatchHistory(movieId) {
+  return requestJson(`/api/watch-history/${movieId}`, { method: 'DELETE' })
 }
