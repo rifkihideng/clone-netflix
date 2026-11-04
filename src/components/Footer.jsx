@@ -1,19 +1,41 @@
 const columns = [
   {
     title: 'Navigasi',
-    links: ['Beranda', 'Film', 'Serial', 'Baru & Populer', 'Daftar Saya'],
+    links: [
+      { label: 'Beranda', href: 'https://www.netflix.com/' },
+      { label: 'Film', href: 'https://www.netflix.com/browse/genre/34399' },
+      { label: 'Serial', href: 'https://www.netflix.com/browse/genre/83' },
+      { label: 'Baru & Populer', href: 'https://www.netflix.com/browse/new-popular' },
+      { label: 'Daftar Saya', href: 'https://www.netflix.com/browse/my-list' },
+    ],
   },
   {
     title: 'Bantuan',
-    links: ['Pusat Bantuan', 'Hubungi Kami', 'Privasi', 'Ketentuan Penggunaan', 'Cookie'],
+    links: [
+      { label: 'Pusat Bantuan', href: 'https://help.netflix.com/' },
+      { label: 'Hubungi Kami', href: 'https://help.netflix.com/contactus' },
+      { label: 'Privasi', href: 'https://help.netflix.com/legal/privacy' },
+      { label: 'Ketentuan Penggunaan', href: 'https://help.netflix.com/legal/termsofuse' },
+      { label: 'Cookie', href: 'https://help.netflix.com/legal/privacy#cookies' },
+    ],
   },
   {
     title: 'Perusahaan',
-    links: ['Tentang Kami', 'Karier', 'Media', 'Investor'],
+    links: [
+      { label: 'Tentang Kami', href: 'https://about.netflix.com/' },
+      { label: 'Karier', href: 'https://jobs.netflix.com/' },
+      { label: 'Media', href: 'https://media.netflix.com/' },
+      { label: 'Investor', href: 'https://ir.netflix.net/' },
+    ],
   },
 ]
 
-const socials = ['Facebook', 'Instagram', 'X (Twitter)', 'YouTube']
+const socials = [
+  { name: 'Facebook', href: 'https://www.facebook.com/netflix' },
+  { name: 'Instagram', href: 'https://www.instagram.com/netflix' },
+  { name: 'X (Twitter)', href: 'https://x.com/netflix' },
+  { name: 'YouTube', href: 'https://www.youtube.com/@Netflix' },
+]
 
 export default function Footer() {
   return (
@@ -27,12 +49,13 @@ export default function Footer() {
               <h4 className="mb-3 text-[0.95rem] font-bold text-[#e5e5e5]">{column.title}</h4>
               {column.links.map((link) => (
                 <a
-                  key={link}
-                  href="#"
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mb-2 block text-sm text-[#b3b3b3] transition-colors duration-200 hover:text-white"
-                  onClick={(event) => event.preventDefault()}
                 >
-                  {link}
+                  {link.label}
                 </a>
               ))}
             </div>
@@ -40,15 +63,16 @@ export default function Footer() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-4">
-          {socials.map((name) => (
+          {socials.map((social) => (
             <a
-              key={name}
-              href="#"
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm text-[#b3b3b3] transition-colors duration-200 hover:text-white"
-              aria-label={name}
-              onClick={(event) => event.preventDefault()}
+              aria-label={social.name}
             >
-              {name}
+              {social.name}
             </a>
           ))}
         </div>
