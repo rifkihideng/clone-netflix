@@ -9,12 +9,32 @@ import PlayerModal from './components/PlayerModal.jsx'
 import MyListRow from './components/MyListRow.jsx'
 import WatchHistoryRow from './components/WatchHistoryRow.jsx'
 import NetflixLoader from './components/NetflixLoader.jsx'
+import LoginPage from './pages/LoginPage.jsx'
+import { useAuth } from './hooks/useAuth.js'
 import { useMyList } from './hooks/useMyList.js'
 import { useWatchHistory } from './hooks/useWatchHistory.js'
 import { requests } from './api.js'
 import NotFound from './pages/NotFound.jsx'
 
 export default function App() {
+  const { user, loading, logout } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#141414]">
+        <NetflixLoader active />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginPage />
+  }
+
+  return <Home user={user} onLogout={logout} />
+}
+
+function Home({ user, onLogout }) {
   const [showNavBg, setShowNavBg] = useState(false)
   const [query, setQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
@@ -68,6 +88,8 @@ export default function App() {
         query={query}
         onQueryChange={setQuery}
         onSearch={handleSearch}
+        user={user}
+        onLogout={onLogout}
       />
 
       {activeQuery ? (

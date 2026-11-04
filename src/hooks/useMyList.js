@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { normalizeMovie } from '../lib/movie.js'
 import { addToMyList, fetchMyList, removeFromMyList } from '../api.js'
-import { useDeviceId } from './useDeviceId.js'
 
 const STORAGE_KEY = 'netflix-clone-my-list'
 
@@ -26,14 +25,13 @@ function saveLocalList(items) {
 }
 
 export function useMyList() {
-  const deviceId = useDeviceId()
   const [items, setItems] = useState([])
   const [usingFallback, setUsingFallback] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
-    fetchMyList(deviceId)
+    fetchMyList()
       .then((list) => {
         if (cancelled) return
         setItems(Array.isArray(list) ? list : [])
@@ -48,7 +46,7 @@ export function useMyList() {
     return () => {
       cancelled = true
     }
-  }, [deviceId])
+  }, [])
 
   useEffect(() => {
     if (usingFallback) saveLocalList(items)
@@ -68,8 +66,8 @@ export function useMyList() {
     if (usingFallback) return
 
     const request = exists
-      ? removeFromMyList(deviceId, normalized.id)
-      : addToMyList(deviceId, normalized)
+      ? removeFromMyList(normalized.id)
+      : addToMyList(normalized)
 
     request.catch(() => {
       // Kembalikan state bila sinkronisasi gagal.

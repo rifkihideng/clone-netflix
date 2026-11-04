@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
 import { normalizeMovie } from '../lib/movie.js'
 import { fetchWatchHistory, recordWatch, removeFromWatchHistory } from '../api.js'
-import { useDeviceId } from './useDeviceId.js'
 
 export function useWatchHistory() {
-  const deviceId = useDeviceId()
   const [items, setItems] = useState([])
 
   useEffect(() => {
     let cancelled = false
 
-    fetchWatchHistory(deviceId)
+    fetchWatchHistory()
       .then((list) => {
         if (!cancelled) setItems(Array.isArray(list) ? list : [])
       })
@@ -21,7 +19,7 @@ export function useWatchHistory() {
     return () => {
       cancelled = true
     }
-  }, [deviceId])
+  }, [])
 
   const record = (movie, progressSeconds = 0, duration = 0) => {
     const normalized = {
@@ -31,7 +29,7 @@ export function useWatchHistory() {
     }
     // Optimistic: pindahkan ke posisi teratas riwayat.
     setItems((prev) => [normalized, ...prev.filter((item) => item.id !== normalized.id)])
-    recordWatch(deviceId, normalized, progressSeconds, duration).catch(() => {
+    recordWatch(normalized, progressSeconds, duration).catch(() => {
       // Gagal sinkron — biarkan UI tetap, server tidak berubah.
     })
   }
@@ -40,7 +38,7 @@ export function useWatchHistory() {
     const removed = items.find((item) => item.id === movieId)
     // Optimistic: langsung hapus dari daftar.
     setItems((prev) => prev.filter((item) => item.id !== movieId))
-    removeFromWatchHistory(deviceId, movieId).catch(() => {
+    removeFromWatchHistory(movieId).catch(() => {
       // Gagal hapus di server — kembalikan item yang tadi dihapus.
       if (removed) {
         setItems((prev) => [removed, ...prev.filter((item) => item.id !== movieId)])

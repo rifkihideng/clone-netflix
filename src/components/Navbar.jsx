@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Search, User } from 'lucide-react'
+import { LogOut, Search } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam-search'
 import { useTypewriter } from '../hooks/useTypewriter.js'
 
-export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
+export default function Navbar({ showBg, query, onQueryChange, onSearch, user, onLogout }) {
   const [focused, setFocused] = useState(false)
   const typedPlaceholder = useTypewriter()
 
@@ -57,13 +57,25 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch }) {
             </BorderBeam>
           </form>
 
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1d1d1d] text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 max-[360px]:hidden"
-            role="img"
-            aria-label="Profil"
-          >
-            <User aria-hidden="true" width={20} height={20} />
-          </div>
+          {user && (
+            <div className="flex items-center gap-2.5">
+              <img
+                src={user.avatar_url}
+                alt={user.login}
+                referrerPolicy="no-referrer"
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#2c2f36]/50"
+              />
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[#1d1d1d] px-3 text-sm text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 transition-colors hover:text-white"
+                aria-label="Keluar"
+              >
+                <LogOut aria-hidden="true" width={16} height={16} />
+                <span className="max-[420px]:hidden">Keluar</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>

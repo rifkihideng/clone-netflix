@@ -57,6 +57,28 @@ const WATCH_HISTORY_DDL = `
   )
 `
 
+// Pengguna yang login lewat GitHub. github_id = id numerik akun GitHub.
+const USERS_DDL = `
+  CREATE TABLE IF NOT EXISTS users (
+    github_id INTEGER PRIMARY KEY,
+    login TEXT NOT NULL,
+    name TEXT,
+    avatar_url TEXT,
+    created_at INTEGER NOT NULL
+  )
+`
+
+// Sesi login (token acak -> pengguna). Token disimpan di cookie httpOnly.
+const SESSIONS_DDL = `
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(github_id) ON DELETE CASCADE
+  )
+`
+
 // Kolom yang dikembalikan ke klien untuk baris film tersimpan. Alias `id`
 // dipertahankan supaya kontrak API ke frontend tidak berubah.
 export const MOVIE_COLUMNS = `
@@ -155,6 +177,8 @@ async function migrate(db) {
 
   await db.execute(MY_LIST_DDL)
   await db.execute(WATCH_HISTORY_DDL)
+  await db.execute(USERS_DDL)
+  await db.execute(SESSIONS_DDL)
 
   // Tabel *_old yang tersisa (baru direname di atas atau sisa migrasi yang
   // terpotong) harus diproses agar tidak ada data yang hilang.
@@ -268,4 +292,48 @@ export async function upsertMovie(db, movie) {
       Date.now(),
     ],
   })
+}
+
+// --- Login GitHub: pengguna & sesi ---
+
+// Simpan/segarkan profil pengguna GitHub.
+export async function upsertUser(db, user) {
+  await db.execute({
+    sql: `INSERT INTO users (github_id, login, name, avatar_url, created_at)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT (github_id) DO UPDATE SET
+            login = excluded.login,
+            name = excluded.name,
+            avatar_url = excluded.avatar_url`,
+    args: [user.id, user.login, user.name ?? null, user.avatar_url ?? null, Date.now()],
+  })
+}
+
+// Buat sesi baru untuk sebuah token. expires_at = epoch millis.
+export async function createSession(db, token, userId, expiresAt) {
+  await db.execute({
+    sql: `INSERT INTO sessions (token, user_id, created_at, expires_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT (token) DO UPDATE SET expires_at = excluded.expires_at`,
+    args: [token, userId, Date.now(), expiresAt],
+  })
+}
+
+// Ambil pengguna dari token sesi yang masih berlaku, atau null.
+export async function getSessionUser(db, token) {
+  if (!token) return null
+  const result = await db.execute({
+    sql: `SELECT u.github_id, u.login, u.name, u.avatar_url
+          FROM sessions s
+          JOIN users u ON u.github_id = s.user_id
+          WHERE s.token = ? AND s.expires_at > ?`,
+    args: [token, Date.now()],
+  })
+  return result.rows[0] ?? null
+}
+
+// Hapus sesi (logout).
+export async function deleteSession(db, token) {
+  if (!token) return
+  await db.execute({ sql: 'DELETE FROM sessions WHERE token = ?', args: [token] })
 }
