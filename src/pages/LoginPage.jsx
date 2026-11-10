@@ -1,4 +1,5 @@
 import { loginUrl } from '../api.js'
+import LoginMarquee from '../components/LoginMarquee.jsx'
 
 function GitHubIcon() {
   return (
@@ -12,6 +13,8 @@ function GitHubIcon() {
 export default function LoginPage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#141414] text-white">
+      {/* Lapisan latar: marquee 3D poster film. */}
+      <LoginMarquee />
       {/* Lapisan latar: gradasi gelap + glow merah khas Netflix. */}
       <div
         aria-hidden="true"
