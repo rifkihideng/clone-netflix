@@ -15,15 +15,12 @@ export default function LoginPage() {
     <div className="relative min-h-screen overflow-hidden bg-[#141414] text-white">
       {/* Lapisan latar: marquee 3D poster film. */}
       <LoginMarquee />
-      {/* Lapisan latar: gradasi gelap + glow merah khas Netflix. */}
+      {/* Lapisan latar: gradasi gelap netral agar poster film tetap fokus. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background: `
-            radial-gradient(1200px 600px at 50% -10%, rgba(229, 9, 20, 0.35), transparent 60%),
-            radial-gradient(900px 500px at 85% 110%, rgba(229, 9, 20, 0.18), transparent 60%),
-            radial-gradient(700px 400px at 10% 100%, rgba(90, 0, 10, 0.25), transparent 60%),
             linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(20,20,20,0.2) 40%, #141414 100%)
           `,
         }}
