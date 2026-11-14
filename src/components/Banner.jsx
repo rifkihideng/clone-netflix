@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Info } from 'lucide-react'
 import { IMG_BASE_URL } from '../api.js'
 import { useFetch } from '../hooks/useFetch.js'
 
@@ -6,7 +7,7 @@ import { useFetch } from '../hooks/useFetch.js'
 const SLIDE_INTERVAL = 6000
 const MAX_SLIDES = 8
 
-export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, onLoaded }) {
+export default function Banner({ fetchUrl, onPlay, onInfo, isInMyList, onToggleMyList, onLoaded }) {
   const { data, loading, error } = useFetch(fetchUrl)
   const [index, setIndex] = useState(0)
   const loadedRef = useRef(false)
@@ -39,8 +40,16 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
 
   if (loading) {
     return (
-      <div className="relative flex h-[90vh] items-center justify-center bg-[#141414] text-center">
-        Memuat...
+      <div className="relative flex h-[90vh] min-h-[600px] items-end overflow-hidden bg-[#141414] px-10 pb-[200px] max-md:h-[70vh] max-md:px-5 max-md:pb-[170px]">
+        <div className="absolute inset-0 animate-[shimmer_1.4s_infinite] bg-[linear-gradient(90deg,#1f1f1f_25%,#2a2a2a_50%,#1f1f1f_75%)] bg-[length:200%_100%]" />
+        <div className="relative z-[2] w-full max-w-[600px]">
+          <div className="mb-4 h-12 w-3/4 max-w-[480px] animate-[shimmer_1.4s_infinite] rounded bg-[linear-gradient(90deg,#2a2a2a_25%,#3a3a3a_50%,#2a2a2a_75%)] bg-[length:200%_100%]" />
+          <div className="mb-4 flex gap-3">
+            <div className="h-11 w-32 animate-[shimmer_1.4s_infinite] rounded bg-[linear-gradient(90deg,#2a2a2a_25%,#3a3a3a_50%,#2a2a2a_75%)] bg-[length:200%_100%]" />
+            <div className="h-11 w-32 animate-[shimmer_1.4s_infinite] rounded bg-[linear-gradient(90deg,#2a2a2a_25%,#3a3a3a_50%,#2a2a2a_75%)] bg-[length:200%_100%]" />
+          </div>
+          <div className="h-16 w-full max-w-[560px] animate-[shimmer_1.4s_infinite] rounded bg-[linear-gradient(90deg,#2a2a2a_25%,#3a3a3a_50%,#2a2a2a_75%)] bg-[length:200%_100%]" />
+        </div>
       </div>
     )
   }
@@ -69,7 +78,7 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
   const poster = movie.poster_path ? `${IMG_BASE_URL}/w500${movie.poster_path}` : ''
 
   return (
-    <header className="relative flex h-[90vh] items-end overflow-hidden bg-[#141414] px-10 pb-[200px] max-md:h-[70vh] max-md:px-5 max-md:pb-[170px]">
+    <header className="relative flex h-[90vh] min-h-[600px] items-end overflow-hidden bg-[#141414] px-10 pb-[200px] max-md:h-[70vh] max-md:px-5 max-md:pb-[170px]">
       {slides.map((slide, i) => {
         const path = slide.backdrop_path || slide.poster_path
         const url = path ? `${IMG_BASE_URL}/original${path}` : ''
@@ -90,7 +99,7 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
       })}
 
       <div className="relative z-[2] max-w-[600px] animate-[banner-fade-in_0.6s_ease]" key={movie.id}>
-        <h2 className="mb-4 text-5xl font-extrabold [text-shadow:2px_2px_8px_rgba(0,0,0,0.6)] max-md:text-4xl">
+        <h2 className="mb-4 line-clamp-2 text-5xl font-extrabold [text-shadow:2px_2px_8px_rgba(0,0,0,0.6)] max-md:text-4xl">
           {title}
         </h2>
         <div className="mb-4 flex gap-3">
@@ -108,6 +117,17 @@ export default function Banner({ fetchUrl, onPlay, isInMyList, onToggleMyList, o
           >
             {inList ? '✓ Tersimpan' : '+ Daftar Saya'}
           </button>
+          {onInfo && (
+            <button
+              className="flex items-center gap-1.5 rounded bg-[rgba(109,109,110,0.7)] px-6 py-2.5 text-base font-bold text-white transition-colors duration-200 hover:bg-[rgba(109,109,110,0.4)]"
+              type="button"
+              onClick={() => onInfo(movie)}
+              aria-label={`Info ${title}`}
+            >
+              <Info size={20} />
+              Info
+            </button>
+          )}
         </div>
         <p className="text-base leading-6 text-[#e5e5e5] [text-shadow:1px_1px_4px_rgba(0,0,0,0.6)] max-md:line-clamp-3">
           {movie.overview}

@@ -1,3 +1,5 @@
+import crypto from 'node:crypto'
+
 // Skema database relasional (Turso/libSQL) untuk fitur Daftar Saya & riwayat
 // tontonan. Modul ini dipakai bersama oleh server Express (server/index.js) dan
 // Vercel Function (api/index.js) supaya definisi skema, migrasi, dan penulisan
@@ -75,6 +77,21 @@ const SESSIONS_DDL = `
     user_id INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(github_id) ON DELETE CASCADE
+  )
+`
+
+// Profil per pengguna ("Siapa yang menonton?"). profile_id unik per pengguna.
+const PROFILES_DDL = `
+  CREATE TABLE IF NOT EXISTS profiles (
+    profile_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    avatar_url TEXT,
+    color TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, profile_id),
     FOREIGN KEY (user_id) REFERENCES users(github_id) ON DELETE CASCADE
   )
 `
@@ -179,6 +196,7 @@ async function migrate(db) {
   await db.execute(WATCH_HISTORY_DDL)
   await db.execute(USERS_DDL)
   await db.execute(SESSIONS_DDL)
+  await db.execute(PROFILES_DDL)
 
   // Tabel *_old yang tersisa (baru direname di atas atau sisa migrasi yang
   // terpotong) harus diproses agar tidak ada data yang hilang.
@@ -231,6 +249,41 @@ async function migrate(db) {
 
     if (legacyMyList) await db.execute('DROP TABLE IF EXISTS my_list_old')
     if (legacyWatch) await db.execute('DROP TABLE IF EXISTS watch_history_old')
+  }
+
+  // Migrasi kepemilikan data dari per-akun (device_id = github_id) ke
+  // per-profil (device_id = github_id:profil). Data lama dipetakan ke profil
+  // default "github" agar tidak hilang saat fitur profil aktif. Idempoten.
+  if (await tableExists(db, 'my_list')) {
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO devices (device_id, created_at)
+            SELECT u.github_id || ':github', MIN(l.added_at)
+            FROM my_list l
+            JOIN users u ON CAST(u.github_id AS TEXT) = l.device_id
+            GROUP BY u.github_id`,
+    })
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO my_list (device_id, movie_id, added_at)
+            SELECT u.github_id || ':github', l.movie_id, l.added_at
+            FROM my_list l
+            JOIN users u ON CAST(u.github_id AS TEXT) = l.device_id`,
+    })
+  }
+
+  if (await tableExists(db, 'watch_history')) {
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO devices (device_id, created_at)
+            SELECT u.github_id || ':github', MIN(l.watched_at)
+            FROM watch_history l
+            JOIN users u ON CAST(u.github_id AS TEXT) = l.device_id
+            GROUP BY u.github_id`,
+    })
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO watch_history (device_id, movie_id, progress_seconds, duration, watched_at)
+            SELECT u.github_id || ':github', l.movie_id, l.progress_seconds, l.duration, l.watched_at
+            FROM watch_history l
+            JOIN users u ON CAST(u.github_id AS TEXT) = l.device_id`,
+    })
   }
 
   try {
@@ -336,4 +389,83 @@ export async function getSessionUser(db, token) {
 export async function deleteSession(db, token) {
   if (!token) return
   await db.execute({ sql: 'DELETE FROM sessions WHERE token = ?', args: [token] })
+}
+
+// --- Profil ("Siapa yang menonton?") ---
+
+export const DEFAULT_PROFILE_ID = 'github'
+export const DEFAULT_PROFILE_COLOR = '#e50914'
+
+// ID profil baru yang unik (untuk profil buatan pengguna).
+export function newProfileId() {
+  return `p-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
+}
+
+// Validasi nama profil: non-string/kosong -> null, maksimal 20 karakter.
+export function sanitizeProfileName(name) {
+  if (typeof name !== 'string') return null
+  const value = name.trim().slice(0, 20)
+  return value || null
+}
+
+// Validasi warna profil: wajib format #rrggbb, selain itu pakai default.
+export function sanitizeProfileColor(color) {
+  if (typeof color !== 'string') return DEFAULT_PROFILE_COLOR
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : DEFAULT_PROFILE_COLOR
+}
+
+// Pastikan profil default "github" selalu ada untuk pengguna.
+export async function ensureDefaultProfile(db, user) {
+  await db.execute({
+    sql: `INSERT INTO profiles (profile_id, user_id, name, avatar_url, color, is_default, created_at)
+          VALUES (?, ?, ?, ?, ?, 1, ?)
+          ON CONFLICT (user_id, profile_id) DO UPDATE SET
+            name = excluded.name,
+            avatar_url = excluded.avatar_url`,
+    args: [
+      DEFAULT_PROFILE_ID,
+      user.github_id,
+      user.login || 'Saya',
+      user.avatar_url ?? null,
+      DEFAULT_PROFILE_COLOR,
+      Date.now(),
+    ],
+  })
+}
+
+// Daftar profil milik pengguna.
+export async function listProfiles(db, githubId) {
+  const result = await db.execute({
+    sql: `SELECT profile_id AS id, name, avatar_url AS avatar, color
+          FROM profiles
+          WHERE user_id = ?
+          ORDER BY is_default DESC, created_at ASC, profile_id ASC`,
+    args: [githubId],
+  })
+  return result.rows
+}
+
+// Tambah profil baru dan kembalikan objek profil.
+export async function insertProfile(db, githubId, { name, color }) {
+  const id = newProfileId()
+  await db.execute({
+    sql: `INSERT INTO profiles (profile_id, user_id, name, avatar_url, color, is_default, created_at)
+          VALUES (?, ?, ?, NULL, ?, 0, ?)`,
+    args: [id, githubId, name, color, Date.now()],
+  })
+  return { id, name, avatar: null, color }
+}
+
+// Hapus profil beserta Daftar Saya & riwayat tontonannya. Profil default
+// "github" tidak boleh dihapus (mengembalikan false).
+export async function removeProfile(db, githubId, profileId) {
+  if (profileId === DEFAULT_PROFILE_ID) return false
+  const deviceKey = `${githubId}:${profileId}`
+  await db.execute({ sql: 'DELETE FROM my_list WHERE device_id = ?', args: [deviceKey] })
+  await db.execute({ sql: 'DELETE FROM watch_history WHERE device_id = ?', args: [deviceKey] })
+  const result = await db.execute({
+    sql: 'DELETE FROM profiles WHERE user_id = ? AND profile_id = ?',
+    args: [githubId, profileId],
+  })
+  return result.rowsAffected > 0
 }

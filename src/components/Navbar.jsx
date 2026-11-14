@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { LogOut, Search } from 'lucide-react'
+import { ArrowLeftRight, LayoutGrid, LogOut, Search } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam-search'
 import { useTypewriter } from '../hooks/useTypewriter.js'
 
-export default function Navbar({ showBg, query, onQueryChange, onSearch, user, onLogout }) {
+export default function Navbar({ showBg, query, onQueryChange, onSearch, onOpenBrowse, user, onLogout, onSwitchProfile }) {
   const [focused, setFocused] = useState(false)
   const typedPlaceholder = useTypewriter()
 
@@ -18,20 +18,37 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch, user, o
         showBg ? 'bg-[#141414]' : ''
       }`}
     >
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          className="bg-transparent p-0 text-[1.8rem] font-black uppercase tracking-[1px] text-[#e50914] max-md:text-[1.4rem]"
-          onClick={() => onSearch('')}
-          aria-label="Kembali ke beranda"
-        >
-          NETFLIX
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 max-[380px]:gap-x-2">
+        <div className="flex items-center gap-6 max-[380px]:gap-3">
+          <button
+            type="button"
+            className="bg-transparent p-0 text-[1.8rem] font-black uppercase tracking-[1px] text-[#e50914] max-md:text-[1.4rem] max-[380px]:text-[1.15rem]"
+            onClick={() => onSearch('')}
+            aria-label="Kembali ke beranda"
+          >
+            NETFLIX
+          </button>
+          {onOpenBrowse && (
+            <button
+              type="button"
+              className="bg-transparent p-0 text-sm font-semibold text-[#e5e5e5] transition-colors duration-200 hover:text-white"
+              onClick={onOpenBrowse}
+              aria-label="Jelajah genre"
+            >
+              <LayoutGrid
+                className="hidden max-[380px]:block"
+                aria-hidden="true"
+                width={18}
+                height={18}
+              />
+              <span className="max-[380px]:hidden">Jelajah</span>
+            </button>
+          )}
+        </div>
 
-        <div className="flex items-center gap-4 max-md:gap-2">
-          <form className="flex min-w-0 items-center" role="search" onSubmit={handleSubmit}>
+        <form className="flex min-w-0 items-center max-md:order-last max-md:w-full" role="search" onSubmit={handleSubmit}>
             <BorderBeam size="line" colorVariant="colorful" duration={3.1} borderRadius={20}>
-              <div className="flex h-[42px] w-60 items-center gap-2.5 rounded-[20px] bg-[#1d1d1d] px-[13px] text-[#565656] ring-1 ring-[#2c2f36]/50 max-md:w-40 max-[360px]:w-32">
+              <div className="flex h-[42px] w-60 items-center gap-2.5 rounded-[20px] bg-[#1d1d1d] px-[13px] text-[#565656] ring-1 ring-[#2c2f36]/50 max-md:w-full">
                 <button className="flex shrink-0 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-[#565656] transition-colors duration-200 hover:text-white" type="submit" aria-label="Cari">
                   <Search aria-hidden="true" width={20} height={20} />
                 </button>
@@ -58,17 +75,28 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch, user, o
           </form>
 
           {user && (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 max-[380px]:gap-2">
               <img
                 src={user.avatar_url}
                 alt={user.login}
                 referrerPolicy="no-referrer"
-                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#2c2f36]/50"
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
               />
+              {onSwitchProfile && (
+                <button
+                  type="button"
+                  onClick={onSwitchProfile}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#1d1d1d] text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 transition-colors hover:text-white max-[380px]:h-8 max-[380px]:w-8"
+                  aria-label="Ganti Profil"
+                  title="Ganti Profil"
+                >
+                  <ArrowLeftRight aria-hidden="true" width={16} height={16} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onLogout}
-                className="flex h-9 items-center gap-1.5 rounded-full bg-[#1d1d1d] px-3 text-sm text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 transition-colors hover:text-white"
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[#1d1d1d] px-3 text-sm text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 transition-colors hover:text-white max-[380px]:h-8 max-[380px]:px-2"
                 aria-label="Keluar"
               >
                 <LogOut aria-hidden="true" width={16} height={16} />
@@ -76,7 +104,6 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch, user, o
               </button>
             </div>
           )}
-        </div>
       </div>
     </nav>
   )

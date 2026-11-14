@@ -37,6 +37,7 @@ export default function SearchResults({ query, onPlay }) {
             const posterPath = item.poster_path || item.backdrop_path
             const mediaType = item.media_type === 'tv' ? 'Serial' : 'Film'
             const rating = item.vote_average ? Math.round(item.vote_average * 10) / 10 : '—'
+            const year = (item.release_date || item.first_air_date)?.slice(0, 4)
 
             return (
               <div
@@ -61,7 +62,8 @@ export default function SearchResults({ query, onPlay }) {
                 <div className="absolute bottom-0 left-0 right-0 rounded-b-md bg-[linear-gradient(to_top,rgba(0,0,0,0.9),transparent)] p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <p className="mb-1 text-sm font-semibold">{name}</p>
                   <p className="text-xs text-[#b3b3b3]">
-                    {mediaType} · ⭐ {rating}
+                    {mediaType}
+                    {year ? ` · ${year}` : ''} · ⭐ {rating}
                   </p>
                 </div>
               </div>

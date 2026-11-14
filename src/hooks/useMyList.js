@@ -2,13 +2,24 @@ import { useEffect, useState } from 'react'
 import { normalizeMovie } from '../lib/movie.js'
 import { addToMyList, fetchMyList, removeFromMyList } from '../api.js'
 
-const STORAGE_KEY = 'netflix-clone-my-list'
+// Kunci penyimpanan lokal dipisah per profil aktif supaya fallback lokal juga
+// tidak bercampur antar profil.
+function getStorageKey() {
+  try {
+    const raw = sessionStorage.getItem('netflix-clone-active-profile')
+    const profile = raw ? JSON.parse(raw) : null
+    const id = typeof profile?.id === 'string' ? profile.id : 'default'
+    return `netflix-clone-my-list:${id}`
+  } catch {
+    return 'netflix-clone-my-list:default'
+  }
+}
 
 // Fallback lokal: dipakai hanya bila database Turso tidak bisa dihubungi,
 // supaya fitur Daftar Saya tetap berfungsi.
 function loadLocalList() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(getStorageKey())
     const parsed = raw ? JSON.parse(raw) : []
     return Array.isArray(parsed) ? parsed : []
   } catch {
@@ -18,7 +29,7 @@ function loadLocalList() {
 
 function saveLocalList(items) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    localStorage.setItem(getStorageKey(), JSON.stringify(items))
   } catch {
     // Storage penuh/diblokir — abaikan.
   }
