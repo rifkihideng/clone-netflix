@@ -5,12 +5,20 @@ import { createClient } from '@libsql/client'
 import {
   ensureSchema,
   normalizeMovie,
+  sanitizeDeviceId,
   upsertDevice,
   upsertMovie,
   upsertUser,
   createSession,
   getSessionUser,
   deleteSession,
+  ensureDefaultProfile,
+  listProfiles,
+  insertProfile,
+  removeProfile,
+  sanitizeProfileName,
+  sanitizeProfileColor,
+  DEFAULT_PROFILE_ID,
   MOVIE_COLUMNS,
   WATCH_COLUMNS,
 } from '../server/schema.js'
@@ -187,6 +195,13 @@ async function getAuthUser(db, request) {
   } catch {
     return null
   }
+}
+
+// Kunci kepemilikan data: github_id + profil aktif (header X-Profile-Id),
+// supaya Daftar Saya & riwayat terpisah per profil.
+function getOwnerKey(user, request) {
+  const profileId = sanitizeDeviceId(request.headers.get('x-profile-id') ?? '')
+  return profileId ? `${user.github_id}:${profileId}` : null
 }
 
 // Ambil subpath API. Prioritas: query param `path` (hasil rewrite), lalu pathname.
@@ -403,13 +418,66 @@ export default {
 
     const db = getDbClient()
 
+    // --- Profil ("Siapa yang menonton?") ---
+    if (apiPath === 'profiles') {
+      if (!db) return json({ error: 'Database Turso belum dikonfigurasi.' }, 503)
+      await ensureSchema(db)
+      const user = await getAuthUser(db, request)
+      if (!user) return json({ error: 'Login diperlukan.' }, 401)
+
+      if (request.method === 'GET') {
+        try {
+          await ensureDefaultProfile(db, user)
+          return json(await listProfiles(db, user.github_id))
+        } catch {
+          return json({ error: 'Gagal membaca profil.' }, 500)
+        }
+      }
+
+      if (request.method === 'POST') {
+        const bodyResult = await readJsonBody(request)
+        if (bodyResult.error) return json({ error: bodyResult.error }, bodyResult.status)
+        const name = sanitizeProfileName(bodyResult.data.name)
+        if (!name) return json({ error: 'Nama profil tidak valid.' }, 400)
+        const color = sanitizeProfileColor(bodyResult.data.color)
+        try {
+          const profile = await insertProfile(db, user.github_id, { name, color })
+          return json(profile, 201)
+        } catch {
+          return json({ error: 'Gagal menambah profil.' }, 500)
+        }
+      }
+
+      return json({ error: 'Metode tidak diizinkan.' }, 405)
+    }
+
+    const profileDelete = apiPath.match(/^profiles\/([A-Za-z0-9_-]+)$/)
+    if (profileDelete && request.method === 'DELETE') {
+      if (!db) return json({ error: 'Database Turso belum dikonfigurasi.' }, 503)
+      await ensureSchema(db)
+      const user = await getAuthUser(db, request)
+      if (!user) return json({ error: 'Login diperlukan.' }, 401)
+      const profileId = sanitizeDeviceId(profileDelete[1])
+      if (!profileId || profileId === DEFAULT_PROFILE_ID) {
+        return json({ error: 'Profil ini tidak dapat dihapus.' }, 400)
+      }
+      try {
+        const removed = await removeProfile(db, user.github_id, profileId)
+        if (!removed) return json({ error: 'Profil tidak ditemukan.' }, 404)
+        return json({ ok: true })
+      } catch {
+        return json({ error: 'Gagal menghapus profil.' }, 500)
+      }
+    }
+
     // --- Daftar Saya (My List) ---
     if (apiPath === 'my-list') {
       if (!db) return json({ error: 'Database Turso belum dikonfigurasi.' }, 503)
       await ensureSchema(db)
       const user = await getAuthUser(db, request)
       if (!user) return json({ error: 'Login diperlukan.' }, 401)
-      const ownerKey = String(user.github_id)
+      const ownerKey = getOwnerKey(user, request)
+      if (!ownerKey) return json({ error: 'Profil tidak valid.' }, 400)
 
       if (request.method === 'GET') {
         try {
@@ -456,7 +524,8 @@ export default {
       await ensureSchema(db)
       const user = await getAuthUser(db, request)
       if (!user) return json({ error: 'Login diperlukan.' }, 401)
-      const ownerKey = String(user.github_id)
+      const ownerKey = getOwnerKey(user, request)
+      if (!ownerKey) return json({ error: 'Profil tidak valid.' }, 400)
       const movieId = Number(myListDelete[1])
       if (!Number.isSafeInteger(movieId) || movieId <= 0) {
         return json({ error: 'ID film tidak valid.' }, 400)
@@ -478,7 +547,8 @@ export default {
       await ensureSchema(db)
       const user = await getAuthUser(db, request)
       if (!user) return json({ error: 'Login diperlukan.' }, 401)
-      const ownerKey = String(user.github_id)
+      const ownerKey = getOwnerKey(user, request)
+      if (!ownerKey) return json({ error: 'Profil tidak valid.' }, 400)
 
       if (request.method === 'GET') {
         try {
@@ -539,7 +609,8 @@ export default {
       await ensureSchema(db)
       const user = await getAuthUser(db, request)
       if (!user) return json({ error: 'Login diperlukan.' }, 401)
-      const ownerKey = String(user.github_id)
+      const ownerKey = getOwnerKey(user, request)
+      if (!ownerKey) return json({ error: 'Profil tidak valid.' }, 400)
       const movieId = Number(historyDelete[1])
       if (!Number.isSafeInteger(movieId) || movieId <= 0) {
         return json({ error: 'ID film tidak valid.' }, 400)

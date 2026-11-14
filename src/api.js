@@ -175,8 +175,25 @@ export const requests = {
 // Identitas pengguna kini diambil dari sesi cookie httpOnly, sehingga
 // tidak perlu lagi mengirim device_id dari klien.
 
+const ACTIVE_PROFILE_KEY = 'netflix-clone-active-profile'
+
+// ID profil aktif (dibaca dari sessionStorage). Dikirim lewat header supaya
+// Daftar Saya & riwayat tontonan tersimpan terpisah per profil.
+function activeProfileId() {
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_PROFILE_KEY)
+    const profile = raw ? JSON.parse(raw) : null
+    return typeof profile?.id === 'string' ? profile.id : null
+  } catch {
+    return null
+  }
+}
+
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, options)
+  const profileId = activeProfileId()
+  const headers = { ...(options.headers || {}) }
+  if (profileId) headers['X-Profile-Id'] = profileId
+  const response = await fetch(url, { ...options, headers })
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
     throw new Error(body.error || `Gagal memuat data (status ${response.status})`)
@@ -195,6 +212,22 @@ export async function fetchMe() {
 
 export async function logoutApi() {
   return requestJson('/api/auth/logout', { method: 'POST' })
+}
+
+export async function fetchProfiles() {
+  return requestJson('/api/profiles')
+}
+
+export async function createProfile(name, color) {
+  return requestJson('/api/profiles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, color }),
+  })
+}
+
+export async function deleteProfile(profileId) {
+  return requestJson(`/api/profiles/${profileId}`, { method: 'DELETE' })
 }
 
 export async function fetchMyList() {

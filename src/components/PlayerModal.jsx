@@ -2,28 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, Volume2, VolumeX, X } from 'lucide-react'
 import { IMG_BASE_URL, fetchFromTMDB } from '../api.js'
 import { useFetch } from '../hooks/useFetch.js'
+import { getMediaType, getVideoKey } from '../lib/movie.js'
 
 // Jumlah maksimal pemeran yang ditampilkan di modal.
 const MAX_CAST = 12
-
-// Cari video YouTube yang cocok: utamakan Trailer resmi, lalu Trailer,
-// Teaser, lalu video YouTube lain.
-function getVideoKey(videos) {
-  const results = videos?.results ?? []
-  const match =
-    results.find((v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official) ||
-    results.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
-    results.find((v) => v.site === 'YouTube' && v.type === 'Teaser') ||
-    results.find((v) => v.site === 'YouTube')
-  return match?.key ?? null
-}
-
-// Tentukan tipe media: serial (tv) atau film (movie). Endpoint khusus film
-// (mis. top_rated/discover) tidak menyertakan media_type, jadi pakai title/name.
-function getMediaType(movie) {
-  if (movie.media_type === 'tv' || movie.media_type === 'movie') return movie.media_type
-  return movie.name && !movie.title ? 'tv' : 'movie'
-}
 
 export default function PlayerModal({ movie, onClose, inMyList, onToggleMyList, onProgress }) {
   const mediaType = getMediaType(movie)

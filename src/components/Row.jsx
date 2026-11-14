@@ -1,8 +1,7 @@
-import { Check, Plus } from 'lucide-react'
-import { IMG_BASE_URL } from '../api.js'
 import { usePaginatedFetch } from '../hooks/usePaginatedFetch.js'
+import MovieCard from './MovieCard.jsx'
 
-export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList, onToggleMyList }) {
+export default function Row({ title, fetchUrl, large = false, onPlay, onInfo, isInMyList, onToggleMyList }) {
   const { items: movies, loading, loadingMore, moreError, error, hasMore, loadMore } = usePaginatedFetch(fetchUrl)
 
   return (
@@ -23,60 +22,17 @@ export default function Row({ title, fetchUrl, large = false, onPlay, isInMyList
 
         {!loading &&
           !error &&
-          movies.map((movie) => {
-            const name = movie.title || movie.name || movie.original_name
-            const posterPath = movie.poster_path || movie.backdrop_path
-            if (!posterPath) return null
-            const inList = isInMyList?.(movie.id) ?? false
-            return (
-              <div
-                key={movie.id}
-                className={`group relative z-[1] shrink-0 cursor-pointer transition-transform duration-300 hover:z-[2] hover:scale-[1.12] ${
-                  large ? 'w-[220px] max-md:w-[160px]' : 'w-[180px] max-md:w-[140px]'
-                }`}
-                title={name}
-                role="button"
-                tabIndex={0}
-                onClick={() => onPlay(movie)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    onPlay(movie)
-                  }
-                }}
-              >
-                <img
-                  className="h-auto w-full rounded-md bg-[#333] object-cover"
-                  src={`${IMG_BASE_URL}/${large ? 'w500' : 'w342'}${posterPath}`}
-                  alt={name}
-                  loading="lazy"
-                />
-                <div className="absolute bottom-0 left-0 right-0 rounded-b-md bg-[linear-gradient(to_top,rgba(0,0,0,0.9),transparent)] p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <p className="mb-1 text-sm font-semibold">{name}</p>
-                  <p className="text-xs text-[#f5c518]">
-                    ⭐ {Math.round(movie.vote_average * 10) / 10}
-                  </p>
-                  {onToggleMyList && (
-                    <button
-                      className="absolute right-2 top-2 flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full bg-[rgba(20,20,20,0.85)] text-white transition-colors duration-200 hover:bg-[#141414]"
-                      type="button"
-                      aria-label={
-                        inList
-                          ? `Hapus ${name} dari Daftar Saya`
-                          : `Tambah ${name} ke Daftar Saya`
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onToggleMyList(movie)
-                      }}
-                    >
-                      {inList ? <Check size={16} /> : <Plus size={16} />}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          movies.map((movie) => (
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              large={large}
+              onPlay={onPlay}
+              onInfo={onInfo}
+              isInMyList={isInMyList}
+              onToggleMyList={onToggleMyList}
+            />
+          ))}
 
         {!loading && !error && hasMore && (
           <button

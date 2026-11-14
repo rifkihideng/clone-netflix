@@ -8,12 +8,20 @@ import { createClient } from '@libsql/client'
 import {
   ensureSchema,
   normalizeMovie,
+  sanitizeDeviceId,
   upsertDevice,
   upsertMovie,
   upsertUser,
   createSession,
   getSessionUser,
   deleteSession,
+  ensureDefaultProfile,
+  listProfiles,
+  insertProfile,
+  removeProfile,
+  sanitizeProfileName,
+  sanitizeProfileColor,
+  DEFAULT_PROFILE_ID,
   MOVIE_COLUMNS,
   WATCH_COLUMNS,
 } from './schema.js'
@@ -124,15 +132,35 @@ function sessionToken(req) {
 
 // Middleware otentikasi: wajib punya sesi login yang masih berlaku.
 // Identitas pengguna disimpan di req.user, dan kunci kepemilikan data
-// (id GitHub) di req.ownerKey.
+// (github_id + profil aktif) di req.ownerKey supaya Daftar Saya & riwayat
+// terpisah per profil.
 async function requireAuth(req, res, next) {
   try {
     const user = await getSessionUser(db, sessionToken(req))
     if (!user) {
       return res.status(401).json({ error: 'Login diperlukan.' })
     }
+    const profileId = sanitizeDeviceId(req.headers['x-profile-id'] ?? '')
+    if (!profileId) {
+      return res.status(400).json({ error: 'Profil tidak valid.' })
+    }
     req.user = user
-    req.ownerKey = String(user.github_id)
+    req.ownerKey = `${user.github_id}:${profileId}`
+    next()
+  } catch {
+    res.status(500).json({ error: 'Gagal memverifikasi sesi.' })
+  }
+}
+
+// Middleware otentikasi ringan: hanya butuh sesi login (tanpa profil aktif).
+// Dipakai endpoint pengelolaan profil, karena profil dipilih sebelum masuk.
+async function requireUser(req, res, next) {
+  try {
+    const user = await getSessionUser(db, sessionToken(req))
+    if (!user) {
+      return res.status(401).json({ error: 'Login diperlukan.' })
+    }
+    req.user = user
     next()
   } catch {
     res.status(500).json({ error: 'Gagal memverifikasi sesi.' })
@@ -197,8 +225,8 @@ const TMDB_PATH_ALLOWLIST = [
   /^\/search\/multi$/,
   /^\/movie\/\d+$/,
   /^\/tv\/\d+$/,
-  /^\/movie\/\d+\/(videos|credits)$/,
-  /^\/tv\/\d+\/(videos|credits)$/,
+  /^\/movie\/\d+\/(videos|credits|similar)$/,
+  /^\/tv\/\d+\/(videos|credits|similar)$/,
 ]
 
 function isPathAllowed(pathname) {
@@ -358,6 +386,46 @@ app.post('/api/auth/logout', requireDb, async (req, res) => {
     buildCookie(SESSION_COOKIE, '', { maxAge: 0, secure: isSecureCookie() }),
   )
   res.json({ ok: true })
+})
+
+// --- Profil ("Siapa yang menonton?") ---
+app.get('/api/profiles', requireDb, requireUser, async (req, res) => {
+  try {
+    await ensureSchema(db)
+    await ensureDefaultProfile(db, req.user)
+    const profiles = await listProfiles(db, req.user.github_id)
+    res.json(profiles)
+  } catch {
+    res.status(500).json({ error: 'Gagal membaca profil.' })
+  }
+})
+
+app.post('/api/profiles', requireDb, writeLimiter, requireUser, async (req, res) => {
+  const name = sanitizeProfileName(req.body?.name)
+  if (!name) return res.status(400).json({ error: 'Nama profil tidak valid.' })
+  const color = sanitizeProfileColor(req.body?.color)
+  try {
+    await ensureSchema(db)
+    const profile = await insertProfile(db, req.user.github_id, { name, color })
+    res.status(201).json(profile)
+  } catch {
+    res.status(500).json({ error: 'Gagal menambah profil.' })
+  }
+})
+
+app.delete('/api/profiles/:profileId', requireDb, writeLimiter, requireUser, async (req, res) => {
+  const profileId = sanitizeDeviceId(req.params.profileId)
+  if (!profileId || profileId === DEFAULT_PROFILE_ID) {
+    return res.status(400).json({ error: 'Profil ini tidak dapat dihapus.' })
+  }
+  try {
+    await ensureSchema(db)
+    const removed = await removeProfile(db, req.user.github_id, profileId)
+    if (!removed) return res.status(404).json({ error: 'Profil tidak ditemukan.' })
+    res.json({ ok: true })
+  } catch {
+    res.status(500).json({ error: 'Gagal menghapus profil.' })
+  }
 })
 
 // --- Daftar Saya (My List) ---
