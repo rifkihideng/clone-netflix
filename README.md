@@ -21,6 +21,8 @@
 
 Aplikasi web yang mereplikasi pengalaman antarmuka Netflix menggunakan React dan Vite. Data film dan serial bersumber langsung dari [The Movie Database (TMDB)](https://www.themoviedb.org/) melalui proxy backend, sehingga seluruh konten yang ditampilkan merupakan data aktual. Proyek ini mencakup pencarian, pemutaran trailer, penyimpanan ke **Daftar Saya**, serta pencatatan riwayat dan posisi tontonan.
 
+Dokumen kebutuhan produk (PRD) tersedia terpisah di [PRD.md](./PRD.md).
+
 ## Fitur
 
 - **Login dengan GitHub** (OAuth): seluruh aplikasi terkunci di balik halaman login bergaya Netflix; profil GitHub pengguna ditampilkan di navbar beserta tombol keluar, dan data Daftar Saya/riwayat tersimpan per akun.
