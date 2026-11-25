@@ -140,10 +140,9 @@ export function useProfiles(user) {
 
   const removeProfile = useCallback(
     (id) => {
-      setProfiles((prev) => {
-        const next = prev.filter((profile) => profile.id !== id)
-        return next.length > 0 ? next : prev
-      })
+      // Profil tamu boleh dihapus sampai kosong (pengguna bisa menambah lagi).
+      // Profil GitHub tetap ada minimal satu (default 'github') dari server.
+      setProfiles((prev) => prev.filter((profile) => profile.id !== id))
 
       if (usingFallback) return
 

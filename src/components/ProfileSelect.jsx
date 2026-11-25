@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useProfiles } from '../hooks/useProfiles.js'
+import { isGuest } from '../lib/guest.js'
 
 const COLORS = ['#e50914', '#0071eb', '#f5c518', '#46d369', '#8c4fd3', '#ff6b3d']
 
 // Layar "Siapa yang menonton?" yang muncul setelah login.
 export default function ProfileSelect({ user, onSelect }) {
   const { profiles, loading, addProfile, removeProfile } = useProfiles(user)
+  const guest = isGuest(user)
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
@@ -36,44 +38,52 @@ export default function ProfileSelect({ user, onSelect }) {
       )}
 
       <div className="flex flex-wrap items-start justify-center gap-6">
-        {profiles.map((profile) => (
-          <div key={profile.id} className="group relative flex flex-col items-center">
-            <button
-              type="button"
-              className="relative flex h-[120px] w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-md ring-1 ring-white/10 transition-all duration-200 hover:scale-[1.06] hover:ring-white/60 max-md:h-[100px] max-md:w-[100px]"
-              onClick={() => onSelect(profile)}
-              aria-label={`Masuk sebagai ${profile.name}`}
-            >
-              {profile.avatar ? (
-                <img
-                  className="h-full w-full object-cover"
-                  src={profile.avatar}
-                  alt={profile.name}
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span
-                  className="flex h-full w-full items-center justify-center text-5xl font-black"
-                  style={{ backgroundColor: profile.color }}
-                >
-                  {profile.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </button>
-            <span className="mt-3 text-base text-[#b3b3b3] group-hover:text-white">{profile.name}</span>
+        {profiles.map((profile) => {
+          // Profil tamu selalu bisa dihapus (termasuk yang terakhir). Profil
+          // GitHub tetap dilindungi: default 'github' & minimal satu profil.
+          const deletable = guest || (profiles.length > 1 && profile.id !== 'github')
 
-            {profiles.length > 1 && profile.id !== 'github' && (
+          return (
+            <div key={profile.id} className="group relative flex flex-col items-center">
               <button
                 type="button"
-                className="absolute -right-2 -top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#1d1d1d] text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 opacity-0 transition-opacity duration-200 hover:text-white group-hover:opacity-100"
-                aria-label={`Hapus profil ${profile.name}`}
-                onClick={() => removeProfile(profile.id)}
+                className="relative flex h-[120px] w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-md ring-1 ring-white/10 transition-all duration-200 hover:scale-[1.06] hover:ring-white/60 max-md:h-[100px] max-md:w-[100px]"
+                onClick={() => onSelect(profile)}
+                aria-label={`Masuk sebagai ${profile.name}`}
               >
-                <X size={14} />
+                {profile.avatar ? (
+                  <img
+                    className="h-full w-full object-cover"
+                    src={profile.avatar}
+                    alt={profile.name}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span
+                    className="flex h-full w-full items-center justify-center text-5xl font-black"
+                    style={{ backgroundColor: profile.color }}
+                  >
+                    {profile.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </button>
-            )}
-          </div>
-        ))}
+              <span className="mt-3 text-base text-[#b3b3b3] group-hover:text-white">{profile.name}</span>
+
+              {deletable && (
+                <button
+                  type="button"
+                  className={`absolute -right-2 -top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#1d1d1d] text-[#b3b3b3] ring-1 ring-[#2c2f36]/50 transition-opacity duration-200 hover:bg-[#2a2a2a] hover:text-white ${
+                    guest ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  aria-label={`Hapus profil ${profile.name}`}
+                  onClick={() => removeProfile(profile.id)}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          )
+        })}
 
         <div className="flex flex-col items-center">
           <button
