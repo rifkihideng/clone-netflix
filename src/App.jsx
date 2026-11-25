@@ -82,10 +82,10 @@ export default function App() {
     setActiveProfile(null)
   }
 
-  return <Home user={user} onLogout={handleLogout} onSwitchProfile={handleSwitchProfile} />
+  return <Home user={user} profile={activeProfile} onLogout={handleLogout} onSwitchProfile={handleSwitchProfile} />
 }
 
-function Home({ user, onLogout, onSwitchProfile }) {
+function Home({ user, profile, onLogout, onSwitchProfile }) {
   const [showNavBg, setShowNavBg] = useState(false)
   const [query, setQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
@@ -149,6 +149,7 @@ function Home({ user, onLogout, onSwitchProfile }) {
         onSearch={handleSearch}
         onOpenBrowse={() => setBrowseOpen(true)}
         user={user}
+        profile={profile}
         onLogout={onLogout}
         onSwitchProfile={onSwitchProfile}
       />

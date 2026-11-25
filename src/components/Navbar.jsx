@@ -3,7 +3,7 @@ import { ArrowLeftRight, LayoutGrid, LogOut, Search } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam-search'
 import { useTypewriter } from '../hooks/useTypewriter.js'
 
-export default function Navbar({ showBg, query, onQueryChange, onSearch, onOpenBrowse, user, onLogout, onSwitchProfile }) {
+export default function Navbar({ showBg, query, onQueryChange, onSearch, onOpenBrowse, user, profile, onLogout, onSwitchProfile }) {
   const [focused, setFocused] = useState(false)
   const typedPlaceholder = useTypewriter()
 
@@ -85,10 +85,11 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch, onOpenB
                 />
               ) : (
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e50914] text-sm font-bold text-white ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
-                  aria-label={user.name || user.login || 'Pengguna'}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
+                  style={{ backgroundColor: profile?.color || '#e50914' }}
+                  aria-label={profile?.name || user.name || user.login || 'Pengguna'}
                 >
-                  {(user.name || user.login || 'T').charAt(0).toUpperCase()}
+                  {(profile?.name || user.name || user.login || 'T').charAt(0).toUpperCase()}
                 </span>
               )}
               {onSwitchProfile && (
