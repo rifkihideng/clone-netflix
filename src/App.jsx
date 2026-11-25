@@ -19,50 +19,21 @@ import { useMyList } from './hooks/useMyList.js'
 import { useWatchHistory } from './hooks/useWatchHistory.js'
 import { requests } from './api.js'
 import NotFound from './pages/NotFound.jsx'
-import { GUEST_PROFILE, GUEST_STORAGE_KEY, isGuest } from './lib/guest.js'
 
 const ACTIVE_PROFILE_KEY = 'netflix-clone-active-profile'
 
 function readActiveProfile() {
   try {
     const raw = sessionStorage.getItem(ACTIVE_PROFILE_KEY)
-    if (raw) return JSON.parse(raw)
+    return raw ? JSON.parse(raw) : null
   } catch {
-    // Storage diblokir — lanjut ke pengecekan mode tamu.
+    return null
   }
-
-  // Mode tamu: pilih profil "Tamu" secara otomatis (tanpa layar profil).
-  try {
-    if (sessionStorage.getItem(GUEST_STORAGE_KEY) === '1') {
-      try {
-        sessionStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(GUEST_PROFILE))
-      } catch {
-        // Gagal menulis — profil tamu tetap dipakai untuk sesi ini.
-      }
-      return GUEST_PROFILE
-    }
-  } catch {
-    // Storage diblokir — tidak bisa memastikan mode tamu.
-  }
-
-  return null
 }
 
 export default function App() {
   const { user, loading, logout, loginAsGuest } = useAuth()
   const [activeProfile, setActiveProfile] = useState(readActiveProfile)
-
-  // Login tamu: langsung pilih profil "Tamu" dan masuk ke beranda tanpa
-  // layar "Siapa yang menonton?".
-  const handleGuestLogin = () => {
-    loginAsGuest()
-    try {
-      sessionStorage.setItem(ACTIVE_PROFILE_KEY, JSON.stringify(GUEST_PROFILE))
-    } catch {
-      // Storage diblokir — profil tamu tetap dipakai untuk sesi ini.
-    }
-    setActiveProfile(GUEST_PROFILE)
-  }
 
   if (loading) {
     return (
@@ -73,7 +44,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginPage onGuestLogin={handleGuestLogin} />
+    return <LoginPage onGuestLogin={loginAsGuest} />
   }
 
   if (!activeProfile) {
@@ -111,10 +82,7 @@ export default function App() {
     setActiveProfile(null)
   }
 
-  // Tamu hanya punya satu profil; tidak ada layar "Ganti Profil" untuknya.
-  const switchProfileHandler = isGuest(user) ? null : handleSwitchProfile
-
-  return <Home user={user} onLogout={handleLogout} onSwitchProfile={switchProfileHandler} />
+  return <Home user={user} onLogout={handleLogout} onSwitchProfile={handleSwitchProfile} />
 }
 
 function Home({ user, onLogout, onSwitchProfile }) {
