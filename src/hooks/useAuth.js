@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchMe, logoutApi } from '../api.js'
+import {
+  GUEST_USER,
+  clearGuestFlag,
+  isGuest,
+  readGuestFlag,
+  setGuestFlag,
+} from '../lib/guest.js'
 
-// Mengelola status login (sesi cookie httpOnly). Dipakai untuk mengunci
-// seluruh aplikasi di belakang halaman login (full-gate).
+// Mengelola status login (sesi cookie httpOnly atau mode tamu). Dipakai untuk
+// mengunci seluruh aplikasi di belakang halaman login (full-gate).
 export function useAuth() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(() => (readGuestFlag() ? GUEST_USER : null))
+  const [loading, setLoading] = useState(() => !readGuestFlag())
 
   useEffect(() => {
+    // Mode tamu tidak memanggil server — langsung dianggap "login".
+    if (readGuestFlag()) return
+
     let cancelled = false
 
     fetchMe()
@@ -26,14 +36,25 @@ export function useAuth() {
     }
   }, [])
 
+  const loginAsGuest = useCallback(() => {
+    setGuestFlag()
+    setUser(GUEST_USER)
+  }, [])
+
   const logout = useCallback(async () => {
+    if (isGuest(user)) {
+      clearGuestFlag()
+      setUser(null)
+      return
+    }
+
     try {
       await logoutApi()
     } catch {
       // Gagal logout di server — tetap bersihkan state lokal.
     }
     setUser(null)
-  }, [])
+  }, [user])
 
-  return { user, loading, logout }
+  return { user, loading, logout, loginAsGuest }
 }

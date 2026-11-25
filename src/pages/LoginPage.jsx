@@ -10,7 +10,7 @@ function GitHubIcon() {
 }
 
 // Halaman login bergaya Netflix: latar gelap + glow merah + kartu "Masuk".
-export default function LoginPage() {
+export default function LoginPage({ onGuestLogin }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#141414] text-white">
       {/* Lapisan latar: marquee 3D poster film. */}
@@ -41,7 +41,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md rounded-lg bg-black/75 p-10 max-md:p-7">
           <h1 className="mb-1 text-3xl font-bold">Masuk</h1>
           <p className="mb-8 text-sm text-[#b3b3b3]">
-            Gunakan akun GitHub untuk melanjutkan ke klon Netflix ini.
+            Gunakan akun GitHub untuk melanjutkan ke klon Netflix ini, atau
+            jelajah sebagai tamu.
           </p>
 
           <a
@@ -52,9 +53,21 @@ export default function LoginPage() {
             Masuk dengan GitHub
           </a>
 
+          {onGuestLogin && (
+            <button
+              type="button"
+              onClick={onGuestLogin}
+              className="mt-3 flex w-full cursor-pointer items-center justify-center gap-3 rounded-md bg-transparent px-4 py-3.5 text-base font-semibold text-[#b3b3b3] ring-1 ring-white/20 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+            >
+              Masuk sebagai Tamu
+            </button>
+          )}
+
           <p className="mt-6 text-xs leading-relaxed text-[#737373]">
             Data Daftar Saya &amp; riwayat tontonan akan tersimpan per akun GitHub
             Anda. Anda akan dialihkan ke GitHub untuk memberikan izin akses.
+            Mode tamu tidak memerlukan akun dan datanya hanya tersimpan di
+            browser ini.
           </p>
         </div>
       </main>

@@ -76,12 +76,21 @@ export default function Navbar({ showBg, query, onQueryChange, onSearch, onOpenB
 
           {user && (
             <div className="flex items-center gap-2.5 max-[380px]:gap-2">
-              <img
-                src={user.avatar_url}
-                alt={user.login}
-                referrerPolicy="no-referrer"
-                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
-              />
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.login}
+                  referrerPolicy="no-referrer"
+                  className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
+                />
+              ) : (
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e50914] text-sm font-bold text-white ring-1 ring-[#2c2f36]/50 max-[380px]:h-8 max-[380px]:w-8"
+                  aria-label={user.name || user.login || 'Pengguna'}
+                >
+                  {(user.name || user.login || 'T').charAt(0).toUpperCase()}
+                </span>
+              )}
               {onSwitchProfile && (
                 <button
                   type="button"
