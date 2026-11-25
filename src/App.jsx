@@ -32,7 +32,7 @@ function readActiveProfile() {
 }
 
 export default function App() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, loginAsGuest } = useAuth()
   const [activeProfile, setActiveProfile] = useState(readActiveProfile)
 
   if (loading) {
@@ -44,7 +44,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginPage />
+    return <LoginPage onGuestLogin={loginAsGuest} />
   }
 
   if (!activeProfile) {
@@ -82,10 +82,10 @@ export default function App() {
     setActiveProfile(null)
   }
 
-  return <Home user={user} onLogout={handleLogout} onSwitchProfile={handleSwitchProfile} />
+  return <Home user={user} profile={activeProfile} onLogout={handleLogout} onSwitchProfile={handleSwitchProfile} />
 }
 
-function Home({ user, onLogout, onSwitchProfile }) {
+function Home({ user, profile, onLogout, onSwitchProfile }) {
   const [showNavBg, setShowNavBg] = useState(false)
   const [query, setQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
@@ -149,6 +149,7 @@ function Home({ user, onLogout, onSwitchProfile }) {
         onSearch={handleSearch}
         onOpenBrowse={() => setBrowseOpen(true)}
         user={user}
+        profile={profile}
         onLogout={onLogout}
         onSwitchProfile={onSwitchProfile}
       />

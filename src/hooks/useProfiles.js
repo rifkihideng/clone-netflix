@@ -4,13 +4,21 @@ import {
   createProfile as apiCreateProfile,
   deleteProfile as apiDeleteProfile,
 } from '../api.js'
+import { isGuest } from '../lib/guest.js'
 
 const STORAGE_KEY = 'netflix-clone-profiles'
+const GUEST_STORAGE_KEY = 'netflix-clone-profiles:guest'
 const DEFAULT_PROFILE = { id: 'github', name: 'Saya', avatar: '', color: '#e50914' }
 
-function loadLocalProfiles() {
+// Profil tamu disimpan terpisah dari cache/fallback akun GitHub supaya tidak
+// bercampur (guest murni lokal, tanpa panggilan server).
+function storageKeyFor(user) {
+  return isGuest(user) ? GUEST_STORAGE_KEY : STORAGE_KEY
+}
+
+function loadLocalProfiles(user) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKeyFor(user))
     const parsed = raw ? JSON.parse(raw) : null
     return Array.isArray(parsed) ? parsed : []
   } catch {
@@ -18,23 +26,31 @@ function loadLocalProfiles() {
   }
 }
 
-function saveLocalProfiles(profiles) {
+function saveLocalProfiles(user, profiles) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+    localStorage.setItem(storageKeyFor(user), JSON.stringify(profiles))
   } catch {
     // Storage penuh/diblokir — abaikan.
   }
 }
 
-// Profil kini bersumber dari server (Turso) dan disinkronkan; localStorage
-// hanya dipakai sebagai cache instan + fallback saat server tidak terjangkau.
+// Profil akun GitHub bersumber dari server (Turso) dan disinkronkan;
+// localStorage hanya dipakai sebagai cache instan + fallback saat server tidak
+// terjangkau. Profil tamu sepenuhnya lokal.
 export function useProfiles(user) {
-  const [profiles, setProfiles] = useState(() => loadLocalProfiles())
-  const [loading, setLoading] = useState(true)
-  const [usingFallback, setUsingFallback] = useState(false)
+  const guest = isGuest(user)
+  const [profiles, setProfiles] = useState(() => loadLocalProfiles(user))
+  const [loading, setLoading] = useState(!guest)
+  const [usingFallback, setUsingFallback] = useState(guest)
   const migratedRef = useRef(false)
 
   useEffect(() => {
+    // Mode tamu: tidak ada sesi server, jadi langsung pakai profil lokal.
+    if (guest) {
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
 
     fetchProfiles()
@@ -49,7 +65,7 @@ export function useProfiles(user) {
         if (!migratedRef.current) {
           migratedRef.current = true
           const serverIds = new Set(serverProfiles.map((profile) => profile.id))
-          const pending = loadLocalProfiles().filter(
+          const pending = loadLocalProfiles(user).filter(
             (profile) => profile.id !== 'github' && !serverIds.has(profile.id),
           )
           if (pending.length > 0) {
@@ -66,7 +82,7 @@ export function useProfiles(user) {
       })
       .catch(() => {
         if (cancelled) return
-        const local = loadLocalProfiles()
+        const local = loadLocalProfiles(user)
         setProfiles(
           local.length > 0
             ? local
@@ -87,11 +103,11 @@ export function useProfiles(user) {
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [user, guest])
 
   useEffect(() => {
-    if (usingFallback) saveLocalProfiles(profiles)
-  }, [profiles, usingFallback])
+    if (usingFallback) saveLocalProfiles(user, profiles)
+  }, [profiles, usingFallback, user])
 
   const addProfile = useCallback(
     (name, color) => {
